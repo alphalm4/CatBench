@@ -111,7 +111,22 @@ def fix_z(atoms, rate_fix):
     else:
         return 0
 
-def execute_benchmark(calculators, NNP_name, benchmark, F_CRIT_RELAX, N_CRIT_RELAX, rate, disp_thrs_slab, disp_thrs_ads, again_seed, damping):
+def execute_benchmark(calculators, **kwargs):
+    required_keys = ['NNP_name', 'benchmark']
+    for key in required_keys:
+        if key not in kwargs:
+            raise ValueError(f"Missing required keyword argument: {key}")
+    
+    NNP_name = kwargs['NNP_name']
+    benchmark = kwargs['benchmark']
+    F_CRIT_RELAX = kwargs.get('F_CRIT_RELAX', .05)
+    N_CRIT_RELAX = kwargs.get('N_CRIT_RELAX', 999)
+    rate = kwargs.get('rate', .5)
+    disp_thrs_slab = kwargs.get('disp_thrs_slab', 1.0)
+    disp_thrs_ads = kwargs.get('disp_thrs_ads', 1.5)
+    again_seed = kwargs.get('again_seed', .2)
+    damping = kwargs.get('damping', 1.0)
+
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
     
     with open(path_pkl, 'rb') as file:

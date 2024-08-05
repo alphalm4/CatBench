@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='catbench',
-    version='0.1.0',
+    version='0.1.1',
     author='Jinuk Moon',
     author_email='jumooon@snu.ac.kr',
     packages=find_packages(),
@@ -12,14 +12,8 @@ setup(
     url='https://github.com/JinukMoon/catbench',
     license='MIT',
     install_requires=[
-        'korean_lunar_calendar>=0.2.1',
-        'requests>=2.0.0',
+        'ase>=3.22.1',
     ],
-    extras_require={
-        'dev': [
-            'ase>=3.22.1',
-        ],
-    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",

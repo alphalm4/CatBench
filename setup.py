@@ -4,7 +4,7 @@ setup(
     name="catbench",
     version='{{VERSION_PLACEHOLDER}}',
     author="JinukMoon",
-    author_email="jumooon@snu.ac.kr",
+    author_email="jumoon@snu.ac.kr",
     packages=find_packages(),
     description="CatBench: Benchmark of Graph Neural Networks for Adsorption Energy Predictions in Heterogeneous Catalysis",
     long_description=open("README.md").read(),
@@ -17,6 +17,7 @@ setup(
         "numpy==1.26",
     ],
     classifiers=[
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],

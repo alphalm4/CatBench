@@ -1,2 +1,2 @@
-# catbench
-MLP benchmarking workflow for catalysis
+# CatBench
+GNN benchmarking workflow for catalysis

@@ -8,6 +8,7 @@ pip install catbench
 ```
 
 ## Overview
+![CatBench Schematic](assets/CatBench_Schematic.png)
 CatBench is a comprehensive benchmarking framework designed to evaluate Graph Neural Networks (GNNs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
 
 ## Usage Workflow
@@ -18,14 +19,31 @@ CatBench supports two types of data sources:
 #### A. Direct from Catalysis-Hub
 
 ```python
+# Import the catbench package
 import catbench
 
-# Convert JSON data from Catalysis-Hub to PKL format
+# Process data from Catalysis-Hub
+catbench.json2pkl("Catalysis-Hub_Dataset_tag")
+```
+
+**Example:**
+```python
+# Process specific dataset from Catalysis-Hub
+# Using AraComputational2022 as an example
 catbench.json2pkl("AraComputational2022")
 ```
 
 #### B. User Dataset
 For custom datasets, prepare your data structure as follows:
+
+The data structure should include:
+- Gas references (`gas/`) containing VASP output files for gas phase molecules
+- Surface structures (`surface1/`, `surface2/`, etc.) containing:
+  - Clean slab calculations (`slab/`)
+  - Adsorbate-surface systems (`H/`, `OH/`, etc.)
+
+Note: Each directory must contain CONTCAR and OSZICAR files. Other VASP output files can be present as well - the `process_output` function will automatically clean up (delete) all files except CONTCAR and OSZICAR.
+
 ```
 data/
 ├── gas/
@@ -35,7 +53,17 @@ data/
 │   └── H2Ogas/
 │       ├── CONTCAR
 │       └── OSZICAR
-└── surface1/
+├── surface1/
+│   ├── slab/
+│   │   ├── CONTCAR
+│   │   └── OSZICAR
+│   ├── H/
+│   │   ├── CONTCAR
+│   │   └── OSZICAR
+│   └── OH/
+│       ├── CONTCAR
+│       └── OSZICAR
+└── surface2/
     ├── slab/
     │   ├── CONTCAR
     │   └── OSZICAR
@@ -52,40 +80,51 @@ Then process using:
 ```python
 import catbench
 
+# Define coefficients for calculating adsorption energies
+# For each adsorbate, specify coefficients based on the reaction equation:
+# Example for H*: 
+#   E_ads(H*) = E(H*) - E(slab) - 1/2 E(H2_gas)
+# Example for OH*:
+#   E_ads(OH*) = E(OH*) - E(slab) + 1/2 E(H2_gas) - E(H2O_gas)
+
 coeff_setting = {
     "H": {
-        "slab": -1,
-        "adslab": 1,
-        "H2gas": -1/2,
+        "slab": -1,      # Coefficient for clean surface
+        "adslab": 1,     # Coefficient for adsorbate-surface system
+        "H2gas": -1/2,   # Coefficient for H2 gas reference
     },
     "OH": {
-        "slab": -1,
-        "adslab": 1,
-        "H2gas": +1/2,
-        "H2Ogas": -1,
+        "slab": -1,      # Coefficient for clean surface
+        "adslab": 1,     # Coefficient for adsorbate-surface system
+        "H2gas": +1/2,   # Coefficient for H2 gas reference
+        "H2Ogas": -1,    # Coefficient for H2O gas reference
     },
 }
 
+# This will clean up directories and keep only CONTCAR and OSZICAR files
 catbench.process_output("data", coeff_setting)
 catbench.vasp2pkl("data")
 ```
 
 ### 2. Execute Benchmark
 
-#### A. Multiple Calculations
+#### A. General Benchmark
+This is a general benchmark setup. The `range()` value determines the number of repetitions for reproducibility testing. If reproducibility testing is not needed, it can be set to 1.
 
 ```python
 import catbench
 from your_calculator import Calculator
 
 # Prepare calculator list
+# range(5): Run 5 times for reproducibility testing
+# range(1): Single run when reproducibility testing is not needed
 calculators = [Calculator() for _ in range(5)]
 
 config = {}
 catbench.execute_benchmark(calculators, **config)
 ```
 
-#### B. Single Calculation
+#### B. Single-point Calculation Benchmark
 
 ```python
 import catbench
@@ -106,8 +145,25 @@ config = {}
 catbench.analysis_GNNs(**config)
 ```
 
+#### Single-point Calculation Analysis
+
+```python
+import catbench
+
+config = {}
+catbench.analysis_GNNs_single(**config)
+```
+
 ## Results
-[Images will be added here]
+Example
+1. Performance Comparison: Single-task vs Multi-task Models
+<p float="left">
+  <img src="assets/mono_plot.png" width="400" />
+  <img src="assets/multi_plot.png" width="400" />
+</p>
+
+2. Comprehensive Performance Metrics
+![Comparison Table](assets/comparison_table.png)
 
 ## Configuration Options
 
@@ -118,7 +174,7 @@ catbench.analysis_GNNs(**config)
 | benchmark | Name of benchmark dataset | Required |
 | F_CRIT_RELAX | Force convergence criterion | 0.05 |
 | N_CRIT_RELAX | Maximum number of steps | 999 |
-| rate | Fix ratio for surface atoms | 0.5 |
+| rate | Fix ratio for surface atoms (0: use original constraints, >0: fix atoms from bottom up to specified ratio) | 0.5 |
 | disp_thrs_slab | Displacement threshold for slab | 1.0 |
 | disp_thrs_ads | Displacement threshold for adsorbate | 1.5 |
 | again_seed | Seed variation threshold | 0.2 |
@@ -151,7 +207,7 @@ catbench.analysis_GNNs(**config)
 | error_bar_display | Toggle error bars | False |
 
 ## License
-[License information]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Citation
-[Citation information]
+This work will be published soon.

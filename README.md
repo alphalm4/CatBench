@@ -156,14 +156,24 @@ catbench.analysis_GNNs_single(**config)
 
 ## Results
 Example
-1. Performance Comparison: Single-task vs Multi-task Models
+1. Adsorption Energy Parity Plot (mono_version & multi_version)
+# You can plot adsorption energy parity plots for each adsorbate across all GNNs, either simply or by adsorbate.
 <p float="left">
   <img src="assets/mono_plot.png" width="400" />
   <img src="assets/multi_plot.png" width="400" />
 </p>
 
-2. Comprehensive Performance Metrics
+2. Comprehensive Performance Table
+# View various metrics for all GNNs.
 ![Comparison Table](assets/comparison_table.png)
+
+3. Outlier Analysis
+# See how outliers are detected for all GNNs.
+![Comparison Table](assets/outlier_table.png)
+
+4. Analysis by Adsorbate
+# Observe how each GNN predicts for each adsorbate.
+![Comparison Table](assets/adsorbate_comp_table.png)
 
 ## Configuration Options
 

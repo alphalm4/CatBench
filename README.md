@@ -124,6 +124,18 @@ config = {}
 catbench.execute_benchmark(calculators, **config)
 ```
 
+After execution, the following files and directories will be created:
+
+1. A `result` directory is created to store all calculation outputs.
+2. Inside the `result` directory, subdirectories are created for each GNN.
+3. Each GNN's subdirectory contains:
+   - `gases/`: Gas reference molecules for adsorption energy calculations
+   - `log/`: Slab and adslab calculation logs
+   - `traj/`: Slab and adslab trajectory files
+   - `{GNN_name}_gases.json`: Gas molecules energies
+   - `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
+   - `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
+
 #### B. Single-point Calculation Benchmark
 
 ```python
@@ -144,6 +156,18 @@ import catbench
 config = {}
 catbench.analysis_GNNs(**config)
 ```
+
+The analysis function processes the calculation data stored in the `result` directory and generates:
+
+1. A `plot/` directory:
+   - Parity plots for each GNN model
+   - Combined parity plots for comparison
+   - Performance visualization plots
+
+2. An Excel file `{dataset_name}_Benchmarking_Analysis.xlsx`:
+   - Comprehensive performance metrics for all GNN models
+   - Statistical analysis of predictions
+   - Model-specific details and parameters
 
 #### Single-point Calculation Analysis
 

@@ -23,14 +23,14 @@ CatBench supports two types of data sources:
 import catbench
 
 # Process data from Catalysis-Hub
-catbench.json2pkl("Catalysis-Hub_Dataset_tag")
+catbench.cathub_preprocess("Catalysis-Hub_Dataset_tag")
 ```
 
 **Example:**
 ```python
 # Process specific dataset from Catalysis-Hub
 # Using AraComputational2022 as an example
-catbench.json2pkl("AraComputational2022")
+catbench.cathub_preprocess("AraComputational2022")
 ```
 
 #### B. User Dataset
@@ -103,7 +103,7 @@ coeff_setting = {
 
 # This will clean up directories and keep only CONTCAR and OSZICAR files
 catbench.process_output("data", coeff_setting)
-catbench.vasp2pkl("data")
+catbench.userdata_preprocess("data")
 ```
 
 ### 2. Execute Benchmark

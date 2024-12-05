@@ -243,7 +243,7 @@ def process_output(dataset_name, coeff_setting):
             os.makedirs(slab_folder_path, exist_ok=True)
 
 
-def vasp2pkl(dataset_name):
+def userdata_preprocess(dataset_name):
     save_directory = os.path.join(os.getcwd(), "raw_data")
     os.makedirs(save_directory, exist_ok=True)
     path_output = os.path.join(os.getcwd(), f"raw_data/{dataset_name}.pkl")
@@ -653,7 +653,7 @@ def aseify_reactions(reactions):
         }
 
 
-def json2pkl(benchmark):
+def cathub_preprocess(benchmark):
     save_directory = os.path.join(os.getcwd(), "raw_data")
     os.makedirs(save_directory, exist_ok=True)
     path_json = os.path.join(save_directory, f"{benchmark}.json")

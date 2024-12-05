@@ -1,5 +1,5 @@
 # CatBench
-Benchmark Framework for Graph Neural Networks in Adsorption Energy Predictions
+CatBench: Benchmark Framework for Graph Neural Networks in Adsorption Energy Predictions
 
 ## Installation
 

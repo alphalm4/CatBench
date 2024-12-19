@@ -141,13 +141,6 @@ After execution, the following files and directories will be created:
 #### B. OC20 GNN Benchmark
 Since OC20 project GNN models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
 
-The overall usage is similar to the general benchmark, but each GNN will only have the following subdirectories:
-
-- `log/`: Slab and adslab calculation logs
-- `traj/`: Slab and adslab trajectory files
-- `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
-- `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
-
 ```python
 import catbench
 from your_calculator import Calculator
@@ -160,6 +153,13 @@ calculators = [Calculator() for _ in range(5)]
 config = {}
 catbench.execute_benchmark_OC20(calculators, **config)
 ```
+
+The overall usage is similar to the general benchmark, but each GNN will only have the following subdirectories:
+
+- `log/`: Slab and adslab calculation logs
+- `traj/`: Slab and adslab trajectory files
+- `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
+- `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
 
 #### C. Single-point Calculation Benchmark
 

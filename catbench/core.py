@@ -45,7 +45,7 @@ def energy_cal_gas(
     }
 
     if optimizer in optimizer_classes:
-        # 선택한 optimizer 클래스 가져오기
+        # Get the selected optimizer class
         OptClass = optimizer_classes[optimizer]
         atoms = deepcopy(atoms_origin)
         atoms.calc = calculator
@@ -138,11 +138,11 @@ def energy_cal(
     }
 
     if optimizer in optimizer_classes:
-        # 선택한 optimizer 클래스 가져오기
+        # Get the selected optimizer class
         OptClass = optimizer_classes[optimizer]
 
         if logfile == "no":
-            # opt = OptClass(atoms, logfile=None, damping=damping)
+
             opt = OptClass(atoms, logfile=None)
             opt.run(fmax=F_CRIT_RELAX, steps=N_CRIT_RELAX)
             elapsed_time = 0
@@ -153,7 +153,6 @@ def energy_cal(
             logfile.write("##  GNN relax starts  ##\n")
             logfile.write("######################\n")
             logfile.write("\nStep 1. Relaxing\n")
-            # opt = OptClass(atoms, logfile=logfile, trajectory=filename, damping=damping)
             opt = OptClass(atoms, logfile=logfile, trajectory=filename)
             opt.run(fmax=F_CRIT_RELAX, steps=N_CRIT_RELAX)
             convert_trajectory(filename)
@@ -208,12 +207,12 @@ def fix_z(atoms, rate_fix):
 
 def process_output(dataset_name, coeff_setting):
     for dirpath, dirnames, filenames in os.walk(dataset_name):
-        # OSZICAR와 CONTCAR 파일이 모두 있는지 확인합니다.
+        # Check if both OSZICAR and CONTCAR files exist
         if "OSZICAR" in filenames and "CONTCAR" in filenames:
-            # 해당 폴더 내의 모든 파일을 순회합니다.
+            # Iterate through all files in the folder
             for file in filenames:
-                # 파일 이름이 OSZICAR 또는 CONTCAR가 아니라면 삭제합니다.
-                if file not in ["OSZICAR", "CONTCAR"]:  # , "coeff.json"]:
+                # Delete files that are not OSZICAR or CONTCAR
+                if file not in ["OSZICAR", "CONTCAR"]:
                     file_path = os.path.join(dirpath, file)
                     os.remove(file_path)
                     print(f"Deleted: {file_path}")
@@ -573,6 +572,156 @@ def execute_benchmark(calculators, **kwargs):
 
         with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
             json.dump(gas_energies, file, indent=4)
+
+    print(f"{GNN_name} Benchmarking Finish")
+
+def execute_benchmark_OC20(calculators, **kwargs):
+    required_keys = ["GNN_name", "benchmark"]
+
+    if not isinstance(calculators, list) or len(calculators) == 0:
+        raise ValueError("Calculators must be a non-empty list.")
+
+    for key in required_keys:
+        if key not in kwargs:
+            raise ValueError(f"Missing required keyword argument: {key}")
+
+    GNN_name = kwargs["GNN_name"]
+    benchmark = kwargs["benchmark"]
+    F_CRIT_RELAX = kwargs.get("F_CRIT_RELAX", 0.05)
+    N_CRIT_RELAX = kwargs.get("N_CRIT_RELAX", 999)
+    rate = kwargs.get("rate", 0.5)
+    disp_thrs_ads = kwargs.get("disp_thrs_ads", 1.5)
+    again_seed = kwargs.get("again_seed", 0.2)
+    damping = kwargs.get("damping", 1.0)
+    optimizer = kwargs.get("optimizer", "LBFGS")
+
+    path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
+
+    with open(path_pkl, "rb") as file:
+        cathub_data = pickle.load(file)
+
+    save_directory = os.path.join(os.getcwd(), "result", GNN_name)
+    print(f"Starting {GNN_name} Benchmarking")
+    # Basic Settings==============================================================================
+    os.makedirs(f"{save_directory}/traj", exist_ok=True)
+    os.makedirs(f"{save_directory}/log", exist_ok=True)
+
+    final_result = {}
+
+    final_outlier = {}
+    final_outlier["Time"] = []
+    final_outlier["normal"] = []
+    final_outlier["outlier"] = []
+
+    # Calculation Part==============================================================================
+
+    accum_time = 0
+
+    print("Starting calculations...")
+    for index, key in enumerate(cathub_data):
+        print(f"[{index+1}/{len(cathub_data)}] {key}")
+        final_result[key] = {}
+        final_result[key]["cathub"] = {}
+        final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
+        for structure in cathub_data[key]["raw"]:
+            if "gas" not in str(structure):
+                final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                    "raw"
+                ][structure]["energy_cathub"]
+        final_result[key]["outliers"] = {
+            "ads_conv": 0,
+            "ads_move": 0,
+            "ads_eng_seed": 0,
+        }
+
+        trag_path = f"{save_directory}/traj/{key}"
+        log_path = f"{save_directory}/log/{key}"
+
+        os.makedirs(trag_path, exist_ok=True)
+        os.makedirs(log_path, exist_ok=True)
+
+        POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+        z_target = fix_z(POSCAR_star, rate)
+
+        informs = {}
+        informs["ads_eng"] = []
+        informs["ads_disp"] = []
+
+        time_total_ads = 0
+
+        for i in range(len(calculators)):
+            ads_energy_calc = 0
+            for structure in cathub_data[key]["raw"]:
+                if "gas" not in str(structure) and structure != "star":
+                    POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                    (
+                        ads_energy,
+                        steps_calculated,
+                        CONTCAR_calculated,
+                        time_calculated,
+                    ) = energy_cal(
+                        calculators[i],
+                        POSCAR_str,
+                        F_CRIT_RELAX,
+                        N_CRIT_RELAX,
+                        damping,
+                        z_target,
+                        optimizer,
+                        f"{log_path}/{structure}_{i}.txt",
+                        f"{trag_path}/{structure}_{i}",
+                    )
+                    accum_time += time_calculated
+                    
+                    ads_step = steps_calculated
+                    ads_displacement = calc_displacement(
+                        POSCAR_str, CONTCAR_calculated
+                    )
+                    ads_time = time_calculated
+                    time_total_ads += time_calculated
+
+            if ads_step == N_CRIT_RELAX:
+                final_result[key]["outliers"]["ads_conv"] += 1
+
+            if ads_displacement > disp_thrs_ads:
+                final_result[key]["outliers"]["ads_move"] += 1
+
+            final_result[key][f"{i}"] = {
+                "ads_eng": ads_energy,
+                "ads_disp": ads_displacement,
+                "time_ads": ads_time,
+            }
+
+            informs["ads_eng"].append(ads_energy)
+            informs["ads_disp"].append(ads_displacement)
+
+        ads_med_index, ads_med_eng = find_median_index(informs["ads_eng"])
+        ads_eng_seed_range = np.max(np.array(informs["ads_eng"])) - np.min(
+            np.array(informs["ads_eng"])
+        )
+        if ads_eng_seed_range > again_seed:
+            final_result[key]["outliers"]["ads_eng_seed"] = 1
+
+        final_result[key]["final"] = {
+            "ads_eng_median": ads_med_eng,
+            "median_num": ads_med_index,
+            "ads_max_disp": np.max(np.array(informs["ads_disp"])),
+            "ads_eng_seed_range": ads_eng_seed_range,
+            "time_total_ads": time_total_ads,
+        }
+
+        outlier_sum = sum(final_result[key]["outliers"].values())
+        final_outlier["Time"] = accum_time
+
+        if outlier_sum == 0:
+            final_outlier["normal"].append(key)
+        else:
+            final_outlier["outlier"].append(key)
+
+        with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+            json.dump(final_result, file, indent=4)
+
+        with open(f"{save_directory}/{GNN_name}_outlier.json", "w") as file:
+            json.dump(final_outlier, file, indent=4)
 
     print(f"{GNN_name} Benchmarking Finish")
 
@@ -1315,6 +1464,9 @@ def analysis_GNNs(**kwargs):
     calculating_path = kwargs.get(
         "calculating_path", os.path.join(os.getcwd(), "result")
     )
+    
+    absolute_energy_GNN = True
+    first_reaction = True
 
     GNN_list = kwargs.get(
         "GNN_list",
@@ -1345,6 +1497,11 @@ def analysis_GNNs(**kwargs):
         for reaction in GNN_result:
             adsorbate = find_adsorbate(GNN_result[reaction]["cathub"])
             adsorbates.add(adsorbate)
+            
+            if first_reaction:
+                first_reaction = False
+                if "slab_conv" not in GNN_result[reaction]["outliers"]:
+                    absolute_energy_GNN = False
 
         time_accum = 0
         step_accum = 0
@@ -1452,23 +1609,27 @@ def analysis_GNNs(**kwargs):
                     step_tmp = count_lbfgs_steps(txt_file)
                     step_accum += step_tmp
 
-                if GNN_result[reaction]["outliers"]["slab_conv"]:
-                    slab_conv += 1
+                if absolute_energy_GNN:
+                    if GNN_result[reaction]["outliers"]["slab_conv"]:
+                        slab_conv += 1
 
                 if GNN_result[reaction]["outliers"]["ads_conv"]:
-                    ads_conv += 1
-
-                if GNN_result[reaction]["outliers"]["slab_move"]:
-                    slab_move += 1
+                    ads_conv += 1                    
+                
+                if absolute_energy_GNN:
+                    if GNN_result[reaction]["outliers"]["slab_move"]:
+                        slab_move += 1
 
                 if GNN_result[reaction]["outliers"]["ads_move"]:
-                    ads_move += 1
+                        ads_move += 1
 
-                if GNN_result[reaction]["outliers"]["slab_seed"]:
-                    slab_seed += 1
+                if absolute_energy_GNN:
+                    if GNN_result[reaction]["outliers"]["slab_seed"]:
+                        slab_seed += 1
 
-                if GNN_result[reaction]["outliers"]["ads_seed"]:
-                    ads_seed += 1
+                if absolute_energy_GNN:
+                    if GNN_result[reaction]["outliers"]["ads_seed"]:
+                        ads_seed += 1
 
                 if GNN_result[reaction]["outliers"]["ads_eng_seed"]:
                     ads_eng_seed += 1
@@ -1548,19 +1709,24 @@ def analysis_GNNs(**kwargs):
             }
         )
 
-        outlier_data.append(
-            {
-                "GNN_name": GNN_name,
-                "Num_outlier": len(ads_data["all"]["outlier"]["DFT"]),
+        outlier_data_dict = {
+            "GNN_name": GNN_name,
+            "Num_outlier": len(ads_data["all"]["outlier"]["DFT"]),
+            "ads_conv": ads_conv,
+            "ads_move": ads_move,
+            "ads_eng_seed": ads_eng_seed,
+        }
+
+        # slab 관련 항목들은 absolute_energy_GNN이 true일 때만 추가
+        if absolute_energy_GNN:
+            outlier_data_dict.update({
                 "slab_conv": slab_conv,
-                "ads_conv": ads_conv,
                 "slab_move": slab_move,
-                "ads_move": ads_move,
                 "slab_seed": slab_seed,
                 "ads_seed": ads_seed,
-                "ads_eng_seed": ads_eng_seed,
-            }
-        )
+            })
+
+        outlier_data.append(outlier_data_dict)
 
     data_to_excel(
         main_data, outlier_data, GNN_datas, list(analysis_adsorbates), **kwargs

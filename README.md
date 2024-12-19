@@ -111,6 +111,8 @@ catbench.userdata_preprocess("data")
 #### A. General Benchmark
 This is a general benchmark setup. The `range()` value determines the number of repetitions for reproducibility testing. If reproducibility testing is not needed, it can be set to 1.
 
+Note: This benchmark is only compatible with GNN models that output total system energy. For example, OC20 GNN models that are trained to directly predict adsorption energies cannot be used with this framework.
+
 ```python
 import catbench
 from your_calculator import Calculator
@@ -136,7 +138,30 @@ After execution, the following files and directories will be created:
    - `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
    - `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
 
-#### B. Single-point Calculation Benchmark
+#### B. OC20 GNN Benchmark
+Since OC20 project GNN models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
+
+The overall usage is similar to the general benchmark, but each GNN will only have the following subdirectories:
+
+- `log/`: Slab and adslab calculation logs
+- `traj/`: Slab and adslab trajectory files
+- `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
+- `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
+
+```python
+import catbench
+from your_calculator import Calculator
+
+# Prepare calculator list
+# range(5): Run 5 times for reproducibility testing
+# range(1): Single run when reproducibility testing is not needed
+calculators = [Calculator() for _ in range(5)]
+
+config = {}
+catbench.execute_benchmark_OC20(calculators, **config)
+```
+
+#### C. Single-point Calculation Benchmark
 
 ```python
 import catbench

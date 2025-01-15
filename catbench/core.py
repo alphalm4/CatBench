@@ -12,6 +12,7 @@ import io
 import copy
 from ase.io import read
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import pandas as pd
 import xlsxwriter
 import traceback
@@ -380,10 +381,10 @@ def execute_benchmark(calculators, **kwargs):
 
     final_result = {}
 
-    final_outlier = {}
-    final_outlier["Time"] = []
-    final_outlier["normal"] = []
-    final_outlier["outlier"] = []
+    final_anomaly = {}
+    final_anomaly["Time"] = []
+    final_anomaly["normal"] = []
+    final_anomaly["anomaly"] = []
 
     # Calculation Part==============================================================================
 
@@ -392,186 +393,192 @@ def execute_benchmark(calculators, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(cathub_data):
-        print(f"[{index+1}/{len(cathub_data)}] {key}")
-        final_result[key] = {}
-        final_result[key]["cathub"] = {}
-        final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-        for structure in cathub_data[key]["raw"]:
-            if "gas" not in str(structure):
-                final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
-                    "raw"
-                ][structure]["energy_cathub"]
-        final_result[key]["outliers"] = {
-            "slab_conv": 0,
-            "ads_conv": 0,
-            "slab_move": 0,
-            "ads_move": 0,
-            "slab_seed": 0,
-            "ads_seed": 0,
-            "ads_eng_seed": 0,
-        }
-
-        trag_path = f"{save_directory}/traj/{key}"
-        log_path = f"{save_directory}/log/{key}"
-
-        os.makedirs(trag_path, exist_ok=True)
-        os.makedirs(log_path, exist_ok=True)
-
-        POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
-        z_target = fix_z(POSCAR_star, rate)
-
-        informs = {}
-        informs["ads_eng"] = []
-        informs["slab_disp"] = []
-        informs["ads_disp"] = []
-        informs["slab_seed"] = []
-        informs["ads_seed"] = []
-
-        time_total_slab = 0
-        time_total_ads = 0
-
-        for i in range(len(calculators)):
-            ads_energy_calc = 0
+        try:
+            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            final_result[key] = {}
+            final_result[key]["cathub"] = {}
+            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
             for structure in cathub_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
-                    (
-                        energy_calculated,
-                        steps_calculated,
-                        CONTCAR_calculated,
-                        time_calculated,
-                    ) = energy_cal(
-                        calculators[i],
-                        POSCAR_str,
-                        F_CRIT_RELAX,
-                        N_CRIT_RELAX,
-                        damping,
-                        z_target,
-                        optimizer,
-                        f"{log_path}/{structure}_{i}.txt",
-                        f"{trag_path}/{structure}_{i}",
-                    )
-                    ads_energy_calc += (
-                        energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
-                    )
-                    accum_time += time_calculated
-                    if structure == "star":
-                        slab_steps = steps_calculated
-                        slab_displacement = calc_displacement(
-                            POSCAR_str, CONTCAR_calculated
-                        )
-                        slab_energy = energy_calculated
-                        slab_time = time_calculated
-                        time_total_slab += time_calculated
-                    else:
-                        ads_step = steps_calculated
-                        ads_displacement = calc_displacement(
-                            POSCAR_str, CONTCAR_calculated
-                        )
-                        ads_energy = energy_calculated
-                        ads_time = time_calculated
-                        time_total_ads += time_calculated
-                else:
-                    gas_tag = f"{structure}_{i}th"
-                    if gas_tag in gas_energies:
-                        ads_energy_calc += (
-                            gas_energies[gas_tag]
-                            * cathub_data[key]["raw"][structure]["stoi"]
-                        )
-                    else:
-                        print(f"{gas_tag} calculating")
-                        gas_CONTCAR, gas_energy = energy_cal_gas(
-                            calculators[i],
-                            cathub_data[key]["raw"][structure]["atoms"],
-                            F_CRIT_RELAX,
-                            f"{save_directory}/gases/POSCARs/POSCAR_{gas_tag}",
-                            gas_distance,
-                            optimizer,
-                            f"{save_directory}/gases/log/{gas_tag}.txt",
-                            f"{save_directory}/gases/traj/{gas_tag}",
-                        )
-                        gas_energies[gas_tag] = gas_energy
-                        ads_energy_calc += (
-                            gas_energy * cathub_data[key]["raw"][structure]["stoi"]
-                        )
-                        write(
-                            f"{save_directory}/gases/CONTCARs/CONTCAR_{gas_tag}",
-                            gas_CONTCAR,
-                        )
-
-            if slab_steps == N_CRIT_RELAX:
-                final_result[key]["outliers"]["slab_conv"] += 1
-
-            if ads_step == N_CRIT_RELAX:
-                final_result[key]["outliers"]["ads_conv"] += 1
-
-            if slab_displacement > disp_thrs_slab:
-                final_result[key]["outliers"]["slab_move"] += 1
-
-            if ads_displacement > disp_thrs_ads:
-                final_result[key]["outliers"]["ads_move"] += 1
-
-            final_result[key][f"{i}"] = {
-                "ads_eng": ads_energy_calc,
-                "slab_abs": slab_energy,
-                "ads_abs": ads_energy,
-                "slab_disp": slab_displacement,
-                "ads_disp": ads_displacement,
-                "time_slab": slab_time,
-                "time_ads": ads_time,
+                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                        "raw"
+                    ][structure]["energy_cathub"]
+            final_result[key]["anomalies"] = {
+                "slab_conv": 0,
+                "ads_conv": 0,
+                "slab_move": 0,
+                "ads_move": 0,
+                "slab_seed": 0,
+                "ads_seed": 0,
+                "ads_eng_seed": 0,
             }
 
-            informs["ads_eng"].append(ads_energy_calc)
-            informs["slab_disp"].append(slab_displacement)
-            informs["ads_disp"].append(ads_displacement)
-            informs["slab_seed"].append(slab_energy)
-            informs["ads_seed"].append(ads_energy)
+            trag_path = f"{save_directory}/traj/{key}"
+            log_path = f"{save_directory}/log/{key}"
 
-        ads_med_index, ads_med_eng = find_median_index(informs["ads_eng"])
-        slab_seed_range = np.max(np.array(informs["slab_seed"])) - np.min(
-            np.array(informs["slab_seed"])
-        )
-        ads_seed_range = np.max(np.array(informs["ads_seed"])) - np.min(
-            np.array(informs["ads_seed"])
-        )
-        ads_eng_seed_range = np.max(np.array(informs["ads_eng"])) - np.min(
-            np.array(informs["ads_eng"])
-        )
-        if slab_seed_range > again_seed:
-            final_result[key]["outliers"]["slab_seed"] = 1
-        if ads_seed_range > again_seed:
-            final_result[key]["outliers"]["ads_seed"] = 1
-        if ads_eng_seed_range > again_seed:
-            final_result[key]["outliers"]["ads_eng_seed"] = 1
+            os.makedirs(trag_path, exist_ok=True)
+            os.makedirs(log_path, exist_ok=True)
 
-        final_result[key]["final"] = {
-            "ads_eng_median": ads_med_eng,
-            "median_num": ads_med_index,
-            "slab_max_disp": np.max(np.array(informs["slab_disp"])),
-            "ads_max_disp": np.max(np.array(informs["ads_disp"])),
-            "slab_seed_range": slab_seed_range,
-            "ads_seed_range": ads_seed_range,
-            "ads_eng_seed_range": ads_eng_seed_range,
-            "time_total_slab": time_total_slab,
-            "time_total_ads": time_total_ads,
-        }
+            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+            z_target = fix_z(POSCAR_star, rate)
 
-        outlier_sum = sum(final_result[key]["outliers"].values())
-        final_outlier["Time"] = accum_time
+            informs = {}
+            informs["ads_eng"] = []
+            informs["slab_disp"] = []
+            informs["ads_disp"] = []
+            informs["slab_seed"] = []
+            informs["ads_seed"] = []
 
-        if outlier_sum == 0:
-            final_outlier["normal"].append(key)
-        else:
-            final_outlier["outlier"].append(key)
+            time_total_slab = 0
+            time_total_ads = 0
 
-        with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
-            json.dump(final_result, file, indent=4)
+            for i in range(len(calculators)):
+                ads_energy_calc = 0
+                for structure in cathub_data[key]["raw"]:
+                    if "gas" not in str(structure):
+                        POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                        (
+                            energy_calculated,
+                            steps_calculated,
+                            CONTCAR_calculated,
+                            time_calculated,
+                        ) = energy_cal(
+                            calculators[i],
+                            POSCAR_str,
+                            F_CRIT_RELAX,
+                            N_CRIT_RELAX,
+                            damping,
+                            z_target,
+                            optimizer,
+                            f"{log_path}/{structure}_{i}.txt",
+                            f"{trag_path}/{structure}_{i}",
+                        )
+                        ads_energy_calc += (
+                            energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
+                        )
+                        accum_time += time_calculated
+                        if structure == "star":
+                            slab_steps = steps_calculated
+                            slab_displacement = calc_displacement(
+                                POSCAR_str, CONTCAR_calculated
+                            )
+                            slab_energy = energy_calculated
+                            slab_time = time_calculated
+                            time_total_slab += time_calculated
+                        else:
+                            ads_step = steps_calculated
+                            ads_displacement = calc_displacement(
+                                POSCAR_str, CONTCAR_calculated
+                            )
+                            ads_energy = energy_calculated
+                            ads_time = time_calculated
+                            time_total_ads += time_calculated
+                    else:
+                        gas_tag = f"{structure}_{i}th"
+                        if gas_tag in gas_energies:
+                            ads_energy_calc += (
+                                gas_energies[gas_tag]
+                                * cathub_data[key]["raw"][structure]["stoi"]
+                            )
+                        else:
+                            print(f"{gas_tag} calculating")
+                            gas_CONTCAR, gas_energy = energy_cal_gas(
+                                calculators[i],
+                                cathub_data[key]["raw"][structure]["atoms"],
+                                F_CRIT_RELAX,
+                                f"{save_directory}/gases/POSCARs/POSCAR_{gas_tag}",
+                                gas_distance,
+                                optimizer,
+                                f"{save_directory}/gases/log/{gas_tag}.txt",
+                                f"{save_directory}/gases/traj/{gas_tag}",
+                            )
+                            gas_energies[gas_tag] = gas_energy
+                            ads_energy_calc += (
+                                gas_energy * cathub_data[key]["raw"][structure]["stoi"]
+                            )
+                            write(
+                                f"{save_directory}/gases/CONTCARs/CONTCAR_{gas_tag}",
+                                gas_CONTCAR,
+                            )
 
-        with open(f"{save_directory}/{GNN_name}_outlier.json", "w") as file:
-            json.dump(final_outlier, file, indent=4)
+                if slab_steps == N_CRIT_RELAX:
+                    final_result[key]["anomalies"]["slab_conv"] += 1
 
-        with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
-            json.dump(gas_energies, file, indent=4)
+                if ads_step == N_CRIT_RELAX:
+                    final_result[key]["anomalies"]["ads_conv"] += 1
+
+                if slab_displacement > disp_thrs_slab:
+                    final_result[key]["anomalies"]["slab_move"] += 1
+
+                if ads_displacement > disp_thrs_ads:
+                    final_result[key]["anomalies"]["ads_move"] += 1
+
+                final_result[key][f"{i}"] = {
+                    "ads_eng": ads_energy_calc,
+                    "slab_abs": slab_energy,
+                    "ads_abs": ads_energy,
+                    "slab_disp": slab_displacement,
+                    "ads_disp": ads_displacement,
+                    "time_slab": slab_time,
+                    "time_ads": ads_time,
+                }
+
+                informs["ads_eng"].append(ads_energy_calc)
+                informs["slab_disp"].append(slab_displacement)
+                informs["ads_disp"].append(ads_displacement)
+                informs["slab_seed"].append(slab_energy)
+                informs["ads_seed"].append(ads_energy)
+
+            ads_med_index, ads_med_eng = find_median_index(informs["ads_eng"])
+            slab_seed_range = np.max(np.array(informs["slab_seed"])) - np.min(
+                np.array(informs["slab_seed"])
+            )
+            ads_seed_range = np.max(np.array(informs["ads_seed"])) - np.min(
+                np.array(informs["ads_seed"])
+            )
+            ads_eng_seed_range = np.max(np.array(informs["ads_eng"])) - np.min(
+                np.array(informs["ads_eng"])
+            )
+            if slab_seed_range > again_seed:
+                final_result[key]["anomalies"]["slab_seed"] = 1
+            if ads_seed_range > again_seed:
+                final_result[key]["anomalies"]["ads_seed"] = 1
+            if ads_eng_seed_range > again_seed:
+                final_result[key]["anomalies"]["ads_eng_seed"] = 1
+
+            final_result[key]["final"] = {
+                "ads_eng_median": ads_med_eng,
+                "median_num": ads_med_index,
+                "slab_max_disp": np.max(np.array(informs["slab_disp"])),
+                "ads_max_disp": np.max(np.array(informs["ads_disp"])),
+                "slab_seed_range": slab_seed_range,
+                "ads_seed_range": ads_seed_range,
+                "ads_eng_seed_range": ads_eng_seed_range,
+                "time_total_slab": time_total_slab,
+                "time_total_ads": time_total_ads,
+            }
+
+            anomaly_sum = sum(final_result[key]["anomalies"].values())
+            final_anomaly["Time"] = accum_time
+
+            if anomaly_sum == 0:
+                final_anomaly["normal"].append(key)
+            else:
+                final_anomaly["anomaly"].append(key)
+
+            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+                json.dump(final_result, file, indent=4)
+
+            with open(f"{save_directory}/{GNN_name}_anomaly_detection.json", "w") as file:
+                json.dump(final_anomaly, file, indent=4)
+
+            with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
+                json.dump(gas_energies, file, indent=4)
+
+        except Exception as e:
+            print(f"Error occurred while processing {key}: {str(e)}")
+            print("Skipping to next reaction...")
+            continue
 
     print(f"{GNN_name} Benchmarking Finish")
 
@@ -608,10 +615,10 @@ def execute_benchmark_OC20(calculators, **kwargs):
 
     final_result = {}
 
-    final_outlier = {}
-    final_outlier["Time"] = []
-    final_outlier["normal"] = []
-    final_outlier["outlier"] = []
+    final_anomaly = {}
+    final_anomaly["Time"] = []
+    final_anomaly["normal"] = []
+    final_anomaly["anomaly"] = []
 
     # Calculation Part==============================================================================
 
@@ -619,109 +626,115 @@ def execute_benchmark_OC20(calculators, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(cathub_data):
-        print(f"[{index+1}/{len(cathub_data)}] {key}")
-        final_result[key] = {}
-        final_result[key]["cathub"] = {}
-        final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-        for structure in cathub_data[key]["raw"]:
-            if "gas" not in str(structure):
-                final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
-                    "raw"
-                ][structure]["energy_cathub"]
-        final_result[key]["outliers"] = {
-            "ads_conv": 0,
-            "ads_move": 0,
-            "ads_eng_seed": 0,
-        }
-
-        trag_path = f"{save_directory}/traj/{key}"
-        log_path = f"{save_directory}/log/{key}"
-
-        os.makedirs(trag_path, exist_ok=True)
-        os.makedirs(log_path, exist_ok=True)
-
-        POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
-        z_target = fix_z(POSCAR_star, rate)
-
-        informs = {}
-        informs["ads_eng"] = []
-        informs["ads_disp"] = []
-
-        time_total_ads = 0
-
-        for i in range(len(calculators)):
-            ads_energy_calc = 0
+        try:
+            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            final_result[key] = {}
+            final_result[key]["cathub"] = {}
+            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
             for structure in cathub_data[key]["raw"]:
-                if "gas" not in str(structure) and structure != "star":
-                    POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
-                    (
-                        ads_energy,
-                        steps_calculated,
-                        CONTCAR_calculated,
-                        time_calculated,
-                    ) = energy_cal(
-                        calculators[i],
-                        POSCAR_str,
-                        F_CRIT_RELAX,
-                        N_CRIT_RELAX,
-                        damping,
-                        z_target,
-                        optimizer,
-                        f"{log_path}/{structure}_{i}.txt",
-                        f"{trag_path}/{structure}_{i}",
-                    )
-                    accum_time += time_calculated
-                    
-                    ads_step = steps_calculated
-                    ads_displacement = calc_displacement(
-                        POSCAR_str, CONTCAR_calculated
-                    )
-                    ads_time = time_calculated
-                    time_total_ads += time_calculated
-
-            if ads_step == N_CRIT_RELAX:
-                final_result[key]["outliers"]["ads_conv"] += 1
-
-            if ads_displacement > disp_thrs_ads:
-                final_result[key]["outliers"]["ads_move"] += 1
-
-            final_result[key][f"{i}"] = {
-                "ads_eng": ads_energy,
-                "ads_disp": ads_displacement,
-                "time_ads": ads_time,
+                if "gas" not in str(structure):
+                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                        "raw"
+                    ][structure]["energy_cathub"]
+            final_result[key]["anomalies"] = {
+                "ads_conv": 0,
+                "ads_move": 0,
+                "ads_eng_seed": 0,
             }
 
-            informs["ads_eng"].append(ads_energy)
-            informs["ads_disp"].append(ads_displacement)
+            trag_path = f"{save_directory}/traj/{key}"
+            log_path = f"{save_directory}/log/{key}"
 
-        ads_med_index, ads_med_eng = find_median_index(informs["ads_eng"])
-        ads_eng_seed_range = np.max(np.array(informs["ads_eng"])) - np.min(
-            np.array(informs["ads_eng"])
-        )
-        if ads_eng_seed_range > again_seed:
-            final_result[key]["outliers"]["ads_eng_seed"] = 1
+            os.makedirs(trag_path, exist_ok=True)
+            os.makedirs(log_path, exist_ok=True)
 
-        final_result[key]["final"] = {
-            "ads_eng_median": ads_med_eng,
-            "median_num": ads_med_index,
-            "ads_max_disp": np.max(np.array(informs["ads_disp"])),
-            "ads_eng_seed_range": ads_eng_seed_range,
-            "time_total_ads": time_total_ads,
-        }
+            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+            z_target = fix_z(POSCAR_star, rate)
 
-        outlier_sum = sum(final_result[key]["outliers"].values())
-        final_outlier["Time"] = accum_time
+            informs = {}
+            informs["ads_eng"] = []
+            informs["ads_disp"] = []
 
-        if outlier_sum == 0:
-            final_outlier["normal"].append(key)
-        else:
-            final_outlier["outlier"].append(key)
+            time_total_ads = 0
 
-        with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
-            json.dump(final_result, file, indent=4)
+            for i in range(len(calculators)):
+                ads_energy_calc = 0
+                for structure in cathub_data[key]["raw"]:
+                    if "gas" not in str(structure) and structure != "star":
+                        POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                        (
+                            ads_energy,
+                            steps_calculated,
+                            CONTCAR_calculated,
+                            time_calculated,
+                        ) = energy_cal(
+                            calculators[i],
+                            POSCAR_str,
+                            F_CRIT_RELAX,
+                            N_CRIT_RELAX,
+                            damping,
+                            z_target,
+                            optimizer,
+                            f"{log_path}/{structure}_{i}.txt",
+                            f"{trag_path}/{structure}_{i}",
+                        )
+                        accum_time += time_calculated
+                        
+                        ads_step = steps_calculated
+                        ads_displacement = calc_displacement(
+                            POSCAR_str, CONTCAR_calculated
+                        )
+                        ads_time = time_calculated
+                        time_total_ads += time_calculated
 
-        with open(f"{save_directory}/{GNN_name}_outlier.json", "w") as file:
-            json.dump(final_outlier, file, indent=4)
+                if ads_step == N_CRIT_RELAX:
+                    final_result[key]["anomalies"]["ads_conv"] += 1
+
+                if ads_displacement > disp_thrs_ads:
+                    final_result[key]["anomalies"]["ads_move"] += 1
+
+                final_result[key][f"{i}"] = {
+                    "ads_eng": ads_energy,
+                    "ads_disp": ads_displacement,
+                    "time_ads": ads_time,
+                }
+
+                informs["ads_eng"].append(ads_energy)
+                informs["ads_disp"].append(ads_displacement)
+
+            ads_med_index, ads_med_eng = find_median_index(informs["ads_eng"])
+            ads_eng_seed_range = np.max(np.array(informs["ads_eng"])) - np.min(
+                np.array(informs["ads_eng"])
+            )
+            if ads_eng_seed_range > again_seed:
+                final_result[key]["anomalies"]["ads_eng_seed"] = 1
+
+            final_result[key]["final"] = {
+                "ads_eng_median": ads_med_eng,
+                "median_num": ads_med_index,
+                "ads_max_disp": np.max(np.array(informs["ads_disp"])),
+                "ads_eng_seed_range": ads_eng_seed_range,
+                "time_total_ads": time_total_ads,
+            }
+
+            anomaly_sum = sum(final_result[key]["anomalies"].values())
+            final_anomaly["Time"] = accum_time
+
+            if anomaly_sum == 0:
+                final_anomaly["normal"].append(key)
+            else:
+                final_anomaly["anomaly"].append(key)
+
+            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+                json.dump(final_result, file, indent=4)
+
+            with open(f"{save_directory}/{GNN_name}_anomaly_detection.json", "w") as file:
+                json.dump(final_anomaly, file, indent=4)
+
+        except Exception as e:
+            print(f"Error occurred while processing {key}: {str(e)}")
+            print("Skipping to next reaction...")
+            continue
 
     print(f"{GNN_name} Benchmarking Finish")
 
@@ -943,6 +956,19 @@ def min_max(DFT_values):
 
     return min, max
 
+def set_matplotlib_font(font_path, font_family):
+    fm.fontManager.addfont(font_path)
+    prop = fm.FontProperties(fname=font_path)
+    font_name = prop.get_name()
+    plt.rcParams['font.family'] = font_family
+    if font_family == 'sans-serif':
+        plt.rcParams['font.sans-serif'] = [font_name]
+    elif font_family == 'serif':
+        plt.rcParams['font.serif'] = [font_name]
+    elif font_family == 'monospace':
+        plt.rcParams['font.monospace'] = [font_name]
+    else:
+        pass
 
 def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     plot_save_path = os.path.join(os.getcwd(), "plot", GNN_name)
@@ -953,17 +979,21 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     specific_color = kwargs.get("specific_color", "black")
     dpi = kwargs.get("dpi", 300)
     error_bar_display = kwargs.get("error_bar_display", False)
+    font_setting = kwargs.get("font_setting", False)
+    
+    if font_setting:
+        set_matplotlib_font(font_setting[0], font_setting[1])
 
     fig, ax = plt.subplots(figsize=figsize)
     
     # single calculation vs normal calculation 구분
     if "normal" in ads_data["all"]:
         if tag == "all":
-            plot_types = ["normal", "outlier"]
+            plot_types = ["normal", "anomaly"]
         elif tag == "normal":
             plot_types = ["normal"]
-        else:  # tag == "outlier"
-            plot_types = ["outlier"]
+        else:  # tag == "anomaly"
+            plot_types = ["anomaly"]
             
         DFT_values = np.concatenate([ads_data["all"][type]["DFT"] for type in plot_types])
         GNN_values = np.concatenate([ads_data["all"][type]["GNN"] for type in plot_types])
@@ -1084,7 +1114,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
         "dodgerblue",
         "orchid",
         "steelblue",
-    ]
+    ] * 10
     markers = [
         "o",
         "^",
@@ -1129,7 +1159,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
         ">",
         "v",
         "8",
-    ]
+    ] * 10
     plot_save_path = os.path.join(os.getcwd(), "plot", GNN_name)
     os.makedirs(plot_save_path, exist_ok=True)
     figsize = kwargs.get("figsize", (9, 8))
@@ -1138,6 +1168,10 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     dpi = kwargs.get("dpi", 300)
     legend_off = kwargs.get("legend_off", False)
     error_bar_display = kwargs.get("error_bar_display", False)
+    font_setting = kwargs.get("font_setting", False)
+    
+    if font_setting:
+        set_matplotlib_font(font_setting[0], font_setting[1])
 
     analysis_adsorbates = [
         adsorbate for adsorbate in ads_data.keys() if adsorbate != "all"
@@ -1270,7 +1304,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     return MAEs
 
 
-def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwargs):
+def data_to_excel(main_data, anomaly_data, GNNs_data, analysis_adsorbates, **kwargs):
     benchmarking_name = kwargs.get("Benchmarking_name", os.path.basename(os.getcwd()))
 
     df_main = pd.DataFrame(main_data)
@@ -1280,28 +1314,28 @@ def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwa
     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
         df_main.to_excel(writer, sheet_name="GNN_Data", index=False)
 
-        df_outlier = pd.DataFrame(outlier_data)
-        df_outlier.to_excel(writer, sheet_name="outlier", index=False)
+        df_anomaly = pd.DataFrame(anomaly_data)
+        df_anomaly.to_excel(writer, sheet_name="anomaly", index=False)
 
         for GNN_name, data_dict in GNNs_data.items():
             data_tmp = []
             for adsorbate in analysis_adsorbates:
                 if f"len_{adsorbate}" in data_dict["normal"]:
-                    normal_rate = (
-                        data_dict["normal"][f"len_{adsorbate}"]
-                        / data_dict["all"][f"len_{adsorbate}"]
+                    anomaly_ratio = (
+                        (1 - data_dict["normal"][f"len_{adsorbate}"]
+                        / data_dict["all"][f"len_{adsorbate}"])
                         * 100
                     )
                     data_tmp.append(
                         {
                             "Adsorbate_name": adsorbate,
-                            "Normal rate (%)": normal_rate,
+                            "Anomaly ratio (%)": anomaly_ratio,
                             "MAE_total (eV)": data_dict["all"][adsorbate],
                             "MAE_normal (eV)": data_dict["normal"][adsorbate],
-                            "MAE_outlier (eV)": data_dict["outlier"][adsorbate],
+                            "MAE_anomaly (eV)": data_dict["anomaly"][adsorbate],
                             "Num_total": data_dict["all"][f"len_{adsorbate}"],
                             "Num_normal": data_dict["normal"][f"len_{adsorbate}"],
-                            "Num_outlier": data_dict["outlier"][f"len_{adsorbate}"],
+                            "Num_anomaly": data_dict["anomaly"][f"len_{adsorbate}"],
                         }
                     )
 
@@ -1331,8 +1365,8 @@ def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwa
 
         # 열 별 형식 및 너비 지정
         column_formats = {
-            "Normal rate (%)": (
-                15,
+            "Anomaly ratio (%)": (
+                20,
                 workbook.add_format(
                     {
                         "num_format": "0.00",
@@ -1344,7 +1378,7 @@ def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwa
             ),
             "MAE_total (eV)": (15, number_format_3f),
             "MAE_normal (eV)": (
-                15,
+                17,
                 workbook.add_format(
                     {
                         "num_format": "0.000",
@@ -1354,10 +1388,10 @@ def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwa
                     }
                 ),
             ),
-            "MAE_outlier (eV)": (15, number_format_3f),
+            "MAE_anomaly (eV)": (20, number_format_3f),
             "Num_total": (12, number_format_0f),
-            "Num_normal": (12, number_format_0f),
-            "Num_outlier": (12, number_format_0f),
+            "Num_normal": (13, number_format_0f),
+            "Num_anomaly": (15, number_format_0f),
             "slab_conv": (12, number_format_0f),
             "ads_conv": (12, number_format_0f),
             "slab_move": (12, number_format_0f),
@@ -1376,8 +1410,8 @@ def data_to_excel(main_data, outlier_data, GNNs_data, analysis_adsorbates, **kwa
                 df_main
                 if sheet_name == "GNN_Data"
                 else (
-                    df_outlier
-                    if sheet_name == "outlier"
+                    df_anomaly
+                    if sheet_name == "anomaly"
                     else pd.DataFrame(
                         [dict(zip(data_tmp[0].keys(), range(len(data_tmp[0]))))]
                     )
@@ -1431,6 +1465,7 @@ def count_lbfgs_steps(log_path):
                 print("calculation fail")
 
     # Return 0 if "Done!" or "LBFGS:" is not found
+    print(log_path)
     print("notfound")
     return 0
 
@@ -1458,15 +1493,12 @@ def get_ads_eng_range(data_dict):
 
 def analysis_GNNs(**kwargs):
     main_data = []
-    outlier_data = []
+    anomaly_data = []
     GNN_datas = {}
     adsorbates = set()
     calculating_path = kwargs.get(
         "calculating_path", os.path.join(os.getcwd(), "result")
     )
-    
-    absolute_energy_GNN = True
-    first_reaction = True
 
     GNN_list = kwargs.get(
         "GNN_list",
@@ -1480,17 +1512,19 @@ def analysis_GNNs(**kwargs):
         ),
     )
     for GNN_name in GNN_list:
+        absolute_energy_GNN = True
+        first_reaction = True
         print(GNN_name)
         with open(f"{calculating_path}/{GNN_name}/{GNN_name}_result.json", "r") as f:
             GNN_result = json.load(f)
 
-        with open(f"{calculating_path}/{GNN_name}/{GNN_name}_outlier.json", "r") as f:
-            GNN_outlier = json.load(f)
+        with open(f"{calculating_path}/{GNN_name}/{GNN_name}_anomaly_detection.json", "r") as f:
+            GNN_anomaly = json.load(f)
 
         ads_data = {
             "all": {
                 "normal": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
-                "outlier": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
+                "anomaly": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
             }
         }
 
@@ -1500,7 +1534,7 @@ def analysis_GNNs(**kwargs):
             
             if first_reaction:
                 first_reaction = False
-                if "slab_conv" not in GNN_result[reaction]["outliers"]:
+                if "slab_conv" not in GNN_result[reaction]["anomalies"]:
                     absolute_energy_GNN = False
 
         time_accum = 0
@@ -1522,79 +1556,119 @@ def analysis_GNNs(**kwargs):
                 if adsorbate not in ads_data:
                     ads_data[adsorbate] = {
                         "normal": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
-                        "outlier": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
+                        "anomaly": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
                     }
 
-                num_outliers = sum(GNN_result[reaction]["outliers"].values())
+                num_anomalies = sum(GNN_result[reaction]["anomalies"].values())
                 
                 GNN_min, GNN_max = get_ads_eng_range(GNN_result[reaction])
 
-                if num_outliers == 0:
-                    ads_data[adsorbate]["normal"]["DFT"] = np.append(
-                        ads_data[adsorbate]["normal"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
-                    )
-                    ads_data[adsorbate]["normal"]["GNN"] = np.append(
-                        ads_data[adsorbate]["normal"]["GNN"],
-                        GNN_result[reaction]["final"]["ads_eng_median"],
-                    )
-                    ads_data[adsorbate]["normal"]["GNN_min"] = np.append(
-                        ads_data[adsorbate]["normal"]["GNN_min"],
-                        GNN_min,
-                    )
-                    ads_data[adsorbate]["normal"]["GNN_max"] = np.append(
-                        ads_data[adsorbate]["normal"]["GNN_max"],
-                        GNN_max,
-                    )
-                    ads_data["all"]["normal"]["DFT"] = np.append(
-                        ads_data["all"]["normal"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
-                    )
-                    ads_data["all"]["normal"]["GNN"] = np.append(
-                        ads_data["all"]["normal"]["GNN"],
-                        GNN_result[reaction]["final"]["ads_eng_median"],
-                    )
-                    ads_data["all"]["normal"]["GNN_min"] = np.append(
-                        ads_data["all"]["normal"]["GNN_min"],
-                        GNN_min,
-                    )
-                    ads_data["all"]["normal"]["GNN_max"] = np.append(
-                        ads_data["all"]["normal"]["GNN_max"],
-                        GNN_max,
-                    )
-                else:
-                    ads_data[adsorbate]["outlier"]["DFT"] = np.append(
-                        ads_data[adsorbate]["outlier"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
-                    )
-                    ads_data[adsorbate]["outlier"]["GNN"] = np.append(
-                        ads_data[adsorbate]["outlier"]["GNN"],
-                        GNN_result[reaction]["final"]["ads_eng_median"],
-                    )
-                    ads_data[adsorbate]["outlier"]["GNN_min"] = np.append(
-                        ads_data[adsorbate]["outlier"]["GNN_min"],
-                        GNN_min,
-                    )
-                    ads_data[adsorbate]["outlier"]["GNN_max"] = np.append(
-                        ads_data[adsorbate]["outlier"]["GNN_max"],
-                        GNN_max,
-                    )
-                    ads_data["all"]["outlier"]["DFT"] = np.append(
-                        ads_data["all"]["outlier"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
-                    )
-                    ads_data["all"]["outlier"]["GNN"] = np.append(
-                        ads_data["all"]["outlier"]["GNN"],
-                        GNN_result[reaction]["final"]["ads_eng_median"],
-                    )
-                    ads_data["all"]["outlier"]["GNN_min"] = np.append(
-                        ads_data["all"]["outlier"]["GNN_min"],
-                        GNN_min,
-                    )
-                    ads_data["all"]["outlier"]["GNN_max"] = np.append(
-                        ads_data["all"]["outlier"]["GNN_max"],
-                        GNN_max,
-                    )
+                # 데이터를 임시 저장할 백업 생성
+                backup = {
+                    "normal": {
+                        "DFT": ads_data[adsorbate]["normal"]["DFT"].copy(),
+                        "GNN": ads_data[adsorbate]["normal"]["GNN"].copy(),
+                        "GNN_min": ads_data[adsorbate]["normal"]["GNN_min"].copy(),
+                        "GNN_max": ads_data[adsorbate]["normal"]["GNN_max"].copy()
+                    },
+                    "anomaly": {
+                        "DFT": ads_data[adsorbate]["anomaly"]["DFT"].copy(),
+                        "GNN": ads_data[adsorbate]["anomaly"]["GNN"].copy(),
+                        "GNN_min": ads_data[adsorbate]["anomaly"]["GNN_min"].copy(),
+                        "GNN_max": ads_data[adsorbate]["anomaly"]["GNN_max"].copy()
+                    }
+                }
+
+                backup_all = {
+                    "normal": {
+                        "DFT": ads_data["all"]["normal"]["DFT"].copy(),
+                        "GNN": ads_data["all"]["normal"]["GNN"].copy(),
+                        "GNN_min": ads_data["all"]["normal"]["GNN_min"].copy(),
+                        "GNN_max": ads_data["all"]["normal"]["GNN_max"].copy()
+                    },
+                    "anomaly": {
+                        "DFT": ads_data["all"]["anomaly"]["DFT"].copy(),
+                        "GNN": ads_data["all"]["anomaly"]["GNN"].copy(),
+                        "GNN_min": ads_data["all"]["anomaly"]["GNN_min"].copy(),
+                        "GNN_max": ads_data["all"]["anomaly"]["GNN_max"].copy()
+                    }
+                }
+
+                try:
+                    if num_anomalies == 0:
+                        ads_data[adsorbate]["normal"]["DFT"] = np.append(
+                            ads_data[adsorbate]["normal"]["DFT"],
+                            GNN_result[reaction]["cathub"]["ads_eng"],
+                        )
+                        ads_data[adsorbate]["normal"]["GNN"] = np.append(
+                            ads_data[adsorbate]["normal"]["GNN"],
+                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        )
+                        ads_data[adsorbate]["normal"]["GNN_min"] = np.append(
+                            ads_data[adsorbate]["normal"]["GNN_min"],
+                            GNN_min,
+                        )
+                        ads_data[adsorbate]["normal"]["GNN_max"] = np.append(
+                            ads_data[adsorbate]["normal"]["GNN_max"],
+                            GNN_max,
+                        )
+                        ads_data["all"]["normal"]["DFT"] = np.append(
+                            ads_data["all"]["normal"]["DFT"],
+                            GNN_result[reaction]["cathub"]["ads_eng"],
+                        )
+                        ads_data["all"]["normal"]["GNN"] = np.append(
+                            ads_data["all"]["normal"]["GNN"],
+                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        )
+                        ads_data["all"]["normal"]["GNN_min"] = np.append(
+                            ads_data["all"]["normal"]["GNN_min"],
+                            GNN_min,
+                        )
+                        ads_data["all"]["normal"]["GNN_max"] = np.append(
+                            ads_data["all"]["normal"]["GNN_max"],
+                            GNN_max,
+                        )
+                    else:
+                        ads_data[adsorbate]["anomaly"]["DFT"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["DFT"],
+                            GNN_result[reaction]["cathub"]["ads_eng"],
+                        )
+                        ads_data[adsorbate]["anomaly"]["GNN"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["GNN"],
+                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        )
+                        ads_data[adsorbate]["anomaly"]["GNN_min"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["GNN_min"],
+                            GNN_min,
+                        )
+                        ads_data[adsorbate]["anomaly"]["GNN_max"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["GNN_max"],
+                            GNN_max,
+                        )
+                        ads_data["all"]["anomaly"]["DFT"] = np.append(
+                            ads_data["all"]["anomaly"]["DFT"],
+                            GNN_result[reaction]["cathub"]["ads_eng"],
+                        )
+                        ads_data["all"]["anomaly"]["GNN"] = np.append(
+                            ads_data["all"]["anomaly"]["GNN"],
+                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        )
+                        ads_data["all"]["anomaly"]["GNN_min"] = np.append(
+                            ads_data["all"]["anomaly"]["GNN_min"],
+                            GNN_min,
+                        )
+                        ads_data["all"]["anomaly"]["GNN_max"] = np.append(
+                            ads_data["all"]["anomaly"]["GNN_max"],
+                            GNN_max,
+                        )
+                except Exception as e:
+                    # 에러 발생 시 백업 데이터로 복원
+                    ads_data[adsorbate]["normal"] = backup["normal"]
+                    ads_data[adsorbate]["anomaly"] = backup["anomaly"]
+                    ads_data["all"]["normal"] = backup_all["normal"]
+                    ads_data["all"]["anomaly"] = backup_all["anomaly"]
+                    print(f"Error processing reaction {reaction} for adsorbate {adsorbate}: {str(e)}")
+                    continue
 
                 time_accum += sum(
                     value
@@ -1610,32 +1684,32 @@ def analysis_GNNs(**kwargs):
                     step_accum += step_tmp
 
                 if absolute_energy_GNN:
-                    if GNN_result[reaction]["outliers"]["slab_conv"]:
+                    if GNN_result[reaction]["anomalies"]["slab_conv"]:
                         slab_conv += 1
 
-                if GNN_result[reaction]["outliers"]["ads_conv"]:
+                if GNN_result[reaction]["anomalies"]["ads_conv"]:
                     ads_conv += 1                    
                 
                 if absolute_energy_GNN:
-                    if GNN_result[reaction]["outliers"]["slab_move"]:
+                    if GNN_result[reaction]["anomalies"]["slab_move"]:
                         slab_move += 1
 
-                if GNN_result[reaction]["outliers"]["ads_move"]:
+                if GNN_result[reaction]["anomalies"]["ads_move"]:
                         ads_move += 1
 
                 if absolute_energy_GNN:
-                    if GNN_result[reaction]["outliers"]["slab_seed"]:
+                    if GNN_result[reaction]["anomalies"]["slab_seed"]:
                         slab_seed += 1
 
                 if absolute_energy_GNN:
-                    if GNN_result[reaction]["outliers"]["ads_seed"]:
+                    if GNN_result[reaction]["anomalies"]["ads_seed"]:
                         ads_seed += 1
 
-                if GNN_result[reaction]["outliers"]["ads_eng_seed"]:
+                if GNN_result[reaction]["anomalies"]["ads_eng_seed"]:
                     ads_eng_seed += 1
 
         DFT_data = np.concatenate(
-            (ads_data["all"]["normal"]["DFT"], ads_data["all"]["outlier"]["DFT"])
+            (ads_data["all"]["normal"]["DFT"], ads_data["all"]["anomaly"]["DFT"])
         )
         min_value_DFT, max_value_DFT = min_max(DFT_data)
 
@@ -1658,10 +1732,10 @@ def analysis_GNNs(**kwargs):
             max_value,
             **kwargs,
         )
-        MAE_outlier = plotter_mono(
+        MAE_anomaly = plotter_mono(
             ads_data,
             GNN_name,
-            "outlier",
+            "anomaly",
             min_value,
             max_value,
             **kwargs,
@@ -1670,7 +1744,7 @@ def analysis_GNNs(**kwargs):
         MAEs_all_multi = plotter_multi(
             ads_data,
             GNN_name,
-            ["normal", "outlier"],
+            ["normal", "anomaly"],
             "all",
             min_value,
             max_value,
@@ -1679,39 +1753,39 @@ def analysis_GNNs(**kwargs):
         MAEs_normal_multi = plotter_multi(
             ads_data, GNN_name, ["normal"], "normal", min_value, max_value, **kwargs
         )
-        MAEs_outlier_multi = plotter_multi(
-            ads_data, GNN_name, ["outlier"], "outlier", min_value, max_value, **kwargs
+        MAEs_anomaly_multi = plotter_multi(
+            ads_data, GNN_name, ["anomaly"], "anomaly", min_value, max_value, **kwargs
         )
 
         GNN_datas[GNN_name] = {
             "all": MAEs_all_multi,
             "normal": MAEs_normal_multi,
-            "outlier": MAEs_outlier_multi,
+            "anomaly": MAEs_anomaly_multi,
         }
 
         total_num = len(ads_data["all"]["normal"]["DFT"]) + len(
-            ads_data["all"]["outlier"]["DFT"]
+            ads_data["all"]["anomaly"]["DFT"]
         )
-        normal_rate = len(ads_data["all"]["normal"]["DFT"]) / total_num * 100
+        anomaly_ratio = (1 - len(ads_data["all"]["normal"]["DFT"]) / total_num) * 100
 
         main_data.append(
             {
                 "GNN_name": GNN_name,
-                "Normal rate (%)": normal_rate,
+                "Anomaly ratio (%)": anomaly_ratio,
                 "MAE_total (eV)": MAE_all,
                 "MAE_normal (eV)": MAE_normal,
-                "MAE_outlier (eV)": MAE_outlier,
+                "MAE_anomaly (eV)": MAE_anomaly,
                 "Num_total": total_num,
                 "Num_normal": len(ads_data["all"]["normal"]["DFT"]),
-                "Num_outlier": len(ads_data["all"]["outlier"]["DFT"]),
-                "Time_total (s)": GNN_outlier["Time"],
+                "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
+                "Time_total (s)": GNN_anomaly["Time"],
                 "Time_per_step (s)": time_accum / step_accum,
             }
         )
 
-        outlier_data_dict = {
+        anomaly_data_dict = {
             "GNN_name": GNN_name,
-            "Num_outlier": len(ads_data["all"]["outlier"]["DFT"]),
+            "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
             "ads_conv": ads_conv,
             "ads_move": ads_move,
             "ads_eng_seed": ads_eng_seed,
@@ -1719,17 +1793,17 @@ def analysis_GNNs(**kwargs):
 
         # slab 관련 항목들은 absolute_energy_GNN이 true일 때만 추가
         if absolute_energy_GNN:
-            outlier_data_dict.update({
+            anomaly_data_dict.update({
                 "slab_conv": slab_conv,
                 "slab_move": slab_move,
                 "slab_seed": slab_seed,
                 "ads_seed": ads_seed,
             })
 
-        outlier_data.append(outlier_data_dict)
+        anomaly_data.append(anomaly_data_dict)
 
     data_to_excel(
-        main_data, outlier_data, GNN_datas, list(analysis_adsorbates), **kwargs
+        main_data, anomaly_data, GNN_datas, list(analysis_adsorbates), **kwargs
     )
 
 
@@ -1836,6 +1910,7 @@ def execute_benchmark_single(calculator, **kwargs):
     GNN_name = kwargs["GNN_name"]
     benchmark = kwargs["benchmark"]
     gas_distance = kwargs.get("gas_distance", 10)
+    rate = kwargs.get("rate", 0.5)
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
@@ -1856,71 +1931,87 @@ def execute_benchmark_single(calculator, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(cathub_data):
-        print(f"[{index+1}/{len(cathub_data)}] {key}")
-        final_result[key] = {}
-        final_result[key]["cathub"] = {}
-        final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-        for structure in cathub_data[key]["raw"]:
-            if "gas" not in str(structure):
-                final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
-                    "raw"
-                ][structure]["energy_cathub"]
+        try:
+            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            final_result[key] = {}
+            final_result[key]["cathub"] = {}
+            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
+            for structure in cathub_data[key]["raw"]:
+                if "gas" not in str(structure):
+                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                        "raw"
+                    ][structure]["energy_cathub"]
+            final_result[key]["anomalies"] = {
+                "ads_conv": 0,
+                "ads_move": 0,
+                "ads_eng_seed": 0,
+            }
 
-        structure_path = f"{save_directory}/structures/{key}"
+            trag_path = f"{save_directory}/traj/{key}"
+            log_path = f"{save_directory}/log/{key}"
 
-        os.makedirs(structure_path, exist_ok=True)
+            os.makedirs(trag_path, exist_ok=True)
+            os.makedirs(log_path, exist_ok=True)
 
-        informs = {}
-        informs["ads_eng"] = []
+            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+            z_target = fix_z(POSCAR_star, rate)
 
-        ads_energy_calc = 0
-        for structure in cathub_data[key]["raw"]:
-            if "gas" not in str(structure):
-                POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
-                write(f"{structure_path}/CONTCAR_{structure}", POSCAR_str)
-                energy_calculated = energy_cal_single(calculator, POSCAR_str)
-                ads_energy_calc += (
-                    energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
-                )
-                if structure == "star":
-                    slab_energy = energy_calculated
-                else:
-                    ads_energy = energy_calculated
+            informs = {}
+            informs["ads_eng"] = []
 
-            else:
-                if structure in gas_energies:
+            ads_energy_calc = 0
+            for structure in cathub_data[key]["raw"]:
+                if "gas" not in str(structure):
+                    POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                    write(f"{trag_path}/CONTCAR_{structure}", POSCAR_str)
+                    energy_calculated = energy_cal_single(calculator, POSCAR_str)
                     ads_energy_calc += (
-                        gas_energies[structure]
-                        * cathub_data[key]["raw"][structure]["stoi"]
+                        energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
                     )
+                    if structure == "star":
+                        slab_energy = energy_calculated
+                    else:
+                        ads_energy = energy_calculated
+
                 else:
-                    print(f"{structure} calculating")
-                    gas_CONTCAR, gas_energy = energy_cal_gas(
-                        calculator,
-                        cathub_data[key]["raw"][structure]["atoms"],
-                        0.05,
-                        f"{save_directory}/gases/POSCAR_{structure}",
-                        gas_distance,
-                        f"{save_directory}/gases/{structure}.txt",
-                        f"{save_directory}/gases/{structure}",
-                    )
-                    gas_energies[structure] = gas_energy
-                    ads_energy_calc += (
-                        gas_energy * cathub_data[key]["raw"][structure]["stoi"]
-                    )
-                    write(f"{save_directory}/gases/CONTCAR_{structure}", gas_CONTCAR)
+                    if structure in gas_energies:
+                        ads_energy_calc += (
+                            gas_energies[structure]
+                            * cathub_data[key]["raw"][structure]["stoi"]
+                        )
+                    else:
+                        print(f"{structure} calculating")
+                        gas_CONTCAR, gas_energy = energy_cal_gas(
+                            calculator,
+                            cathub_data[key]["raw"][structure]["atoms"],
+                            0.05,
+                            f"{save_directory}/gases/POSCAR_{structure}",
+                            gas_distance,
+                            f"{save_directory}/gases/{structure}.txt",
+                            f"{save_directory}/gases/{structure}",
+                        )
+                        gas_energies[structure] = gas_energy
+                        ads_energy_calc += (
+                            gas_energy * cathub_data[key]["raw"][structure]["stoi"]
+                        )
+                        write(f"{save_directory}/gases/CONTCAR_{structure}", gas_CONTCAR)
 
-        final_result[key]["SC_calc"] = {
-            "ads_eng": ads_energy_calc,
-            "slab_abs": slab_energy,
-            "ads_abs": ads_energy,
-        }
+            final_result[key]["SC_calc"] = {
+                "ads_eng": ads_energy_calc,
+                "slab_abs": slab_energy,
+                "ads_abs": ads_energy,
+            }
 
-        with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
-            json.dump(final_result, file, indent=4)
+            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+                json.dump(final_result, file, indent=4)
 
-        with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
-            json.dump(gas_energies, file, indent=4)
+            with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
+                json.dump(gas_energies, file, indent=4)
+
+        except Exception as e:
+            print(f"Error occurred while processing {key}: {str(e)}")
+            print("Skipping to next reaction...")
+            continue
 
     print(f"{GNN_name} Benchmarking Finish")
 

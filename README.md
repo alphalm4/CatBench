@@ -58,21 +58,37 @@ data/
 │   │   ├── CONTCAR
 │   │   └── OSZICAR
 │   ├── H/
-│   │   ├── CONTCAR
-│   │   └── OSZICAR
+│   │   ├── 1/
+│   │   │   ├── CONTCAR
+│   │   │   └── OSZICAR
+│   │   └── 2/
+│   │       ├── CONTCAR
+│   │       └── OSZICAR
 │   └── OH/
-│       ├── CONTCAR
-│       └── OSZICAR
+│       ├── 1/
+│       │   ├── CONTCAR
+│       │   └── OSZICAR
+│       └── 2/
+│           ├── CONTCAR
+│           └── OSZICAR
 └── surface2/
     ├── slab/
     │   ├── CONTCAR
     │   └── OSZICAR
     ├── H/
-    │   ├── CONTCAR
-    │   └── OSZICAR
+    │   ├── 1/
+    │   │   ├── CONTCAR
+    │   │   └── OSZICAR
+    │   └── 2/
+    │       ├── CONTCAR
+    │       └── OSZICAR
     └── OH/
-        ├── CONTCAR
-        └── OSZICAR
+        ├── 1/
+        │   ├── CONTCAR
+        │   └── OSZICAR
+        └── 2/
+            ├── CONTCAR
+            └── OSZICAR
 ```
 
 Then process using:
@@ -135,8 +151,8 @@ After execution, the following files and directories will be created:
    - `log/`: Slab and adslab calculation logs
    - `traj/`: Slab and adslab trajectory files
    - `{GNN_name}_gases.json`: Gas molecules energies
-   - `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
-   - `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
+   - `{GNN_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+   - `{GNN_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
 #### B. OC20 GNN Benchmark
 Since OC20 project GNN models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
@@ -158,8 +174,8 @@ The overall usage is similar to the general benchmark, but each GNN will only ha
 
 - `log/`: Slab and adslab calculation logs
 - `traj/`: Slab and adslab trajectory files
-- `{GNN_name}_outlier.json`: Outlier detection status for each adsorption data
-- `{GNN_name}_result.json`: Raw data (energies, calculation times, outlier detection, slab displacements, etc.)
+- `{GNN_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+- `{GNN_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
 #### C. Single-point Calculation Benchmark
 
@@ -216,9 +232,9 @@ You can plot adsorption energy parity plots for each adsorbate across all GNNs, 
 View various metrics for all GNNs.
 ![Comparison Table](assets/comparison_table.png)
 
-### 3. Outlier Analysis
-See how outliers are detected for all GNNs.
-![Comparison Table](assets/outlier_table.png)
+### 3. Anomaly Analysis
+See how anomalies are detected for all GNNs.
+![Comparison Table](assets/anomaly_table.png)
 
 ### 4. Analysis by Adsorbate
 Observe how each GNN predicts for each adsorbate.
@@ -226,7 +242,7 @@ Observe how each GNN predicts for each adsorbate.
 
 ## Configuration Options
 
-### execute_benchmark
+### execute_benchmark / execute_benchmark_OC20
 | Option | Description | Default |
 |--------|-------------|---------|
 | GNN_name | Name of your GNN | Required |
@@ -256,14 +272,16 @@ Observe how each GNN predicts for each adsorbate.
 | GNN_list | List of GNNs to analyze | All GNNs in result directory |
 | target_adsorbates | Target adsorbates to analyze | All adsorbates |
 | specific_color | Color for plots | "black" |
-| min | Plot y-axis minimum | Auto-calculated |
-| max | Plot y-axis maximum | Auto-calculated |
+| min | Axis minimum | Auto-calculated |
+| max | Axis maximum | Auto-calculated |
 | figsize | Figure size | (9, 8) |
 | mark_size | Marker size | 100 |
 | linewidths | Line width | 1.5 |
 | dpi | Plot resolution | 300 |
 | legend_off | Toggle legend | False |
 | error_bar_display | Toggle error bars | False |
+| font_setting | Font setting eg(["/Users/user/Library/Fonts/Helvetica.ttf", "sans-serif"]) | False |
+
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

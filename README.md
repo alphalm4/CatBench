@@ -280,7 +280,7 @@ Observe how each GNN predicts for each adsorbate.
 | dpi | Plot resolution | 300 |
 | legend_off | Toggle legend | False |
 | error_bar_display | Toggle error bars | False |
-| font_setting | Font setting eg(["/Users/user/Library/Fonts/Helvetica.ttf", "sans-serif"]) | False |
+| font_setting | Font setting <br> (Eg: `["/Users/user/Library/Fonts/Helvetica.ttf", "sans-serif"]`) | False |
 
 
 ## License

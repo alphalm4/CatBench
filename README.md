@@ -1,5 +1,5 @@
 # CatBench
-CatBench: Benchmark Framework for Graph Neural Networks in Adsorption Energy Predictions
+CatBench: Benchmark Framework for Machine Learning Potentials in Adsorption Energy Predictions
 
 ## Installation
 
@@ -9,7 +9,7 @@ pip install catbench
 
 ## Overview
 ![CatBench Schematic](assets/CatBench_Schematic.png)
-CatBench is a comprehensive benchmarking framework designed to evaluate Graph Neural Networks (GNNs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
+CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Potentials (MLPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
 
 ## Usage Workflow
 
@@ -127,7 +127,7 @@ catbench.userdata_preprocess("data")
 #### A. General Benchmark
 This is a general benchmark setup. The `range()` value determines the number of repetitions for reproducibility testing. If reproducibility testing is not needed, it can be set to 1.
 
-Note: This benchmark is only compatible with GNN models that output total system energy. For example, OC20 GNN models that are trained to directly predict adsorption energies cannot be used with this framework.
+Note: This benchmark is only compatible with MLP models that output total system energy. For example, OC20 MLP models that are trained to directly predict adsorption energies cannot be used with this framework.
 
 ```python
 import catbench
@@ -145,17 +145,17 @@ catbench.execute_benchmark(calculators, **config)
 After execution, the following files and directories will be created:
 
 1. A `result` directory is created to store all calculation outputs.
-2. Inside the `result` directory, subdirectories are created for each GNN.
-3. Each GNN's subdirectory contains:
+2. Inside the `result` directory, subdirectories are created for each MLP.
+3. Each MLP's subdirectory contains:
    - `gases/`: Gas reference molecules for adsorption energy calculations
    - `log/`: Slab and adslab calculation logs
    - `traj/`: Slab and adslab trajectory files
-   - `{GNN_name}_gases.json`: Gas molecules energies
-   - `{GNN_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
-   - `{GNN_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
+   - `{MLP_name}_gases.json`: Gas molecules energies
+   - `{MLP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+   - `{MLP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
-#### B. OC20 GNN Benchmark
-Since OC20 project GNN models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
+#### B. OC20 MLP Benchmark
+Since OC20 project MLP models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
 
 ```python
 import catbench
@@ -170,12 +170,12 @@ config = {}
 catbench.execute_benchmark_OC20(calculators, **config)
 ```
 
-The overall usage is similar to the general benchmark, but each GNN will only have the following subdirectories:
+The overall usage is similar to the general benchmark, but each MLP will only have the following subdirectories:
 
 - `log/`: Slab and adslab calculation logs
 - `traj/`: Slab and adslab trajectory files
-- `{GNN_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
-- `{GNN_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
+- `{MLP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+- `{MLP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
 #### C. Single-point Calculation Benchmark
 
@@ -195,18 +195,18 @@ catbench.execute_benchmark_single(calculator, **config)
 import catbench
 
 config = {}
-catbench.analysis_GNNs(**config)
+catbench.analysis_MLPs(**config)
 ```
 
 The analysis function processes the calculation data stored in the `result` directory and generates:
 
 1. A `plot/` directory:
-   - Parity plots for each GNN model
+   - Parity plots for each MLP model
    - Combined parity plots for comparison
    - Performance visualization plots
 
 2. An Excel file `{dataset_name}_Benchmarking_Analysis.xlsx`:
-   - Comprehensive performance metrics for all GNN models
+   - Comprehensive performance metrics for all MLP models
    - Statistical analysis of predictions
    - Model-specific details and parameters
 
@@ -216,28 +216,28 @@ The analysis function processes the calculation data stored in the `result` dire
 import catbench
 
 config = {}
-catbench.analysis_GNNs_single(**config)
+catbench.analysis_MLPs_single(**config)
 ```
 
 ## Outputs
 
 ### 1. Adsorption Energy Parity Plot (mono_version & multi_version)
-You can plot adsorption energy parity plots for each adsorbate across all GNNs, either simply or by adsorbate.
+You can plot adsorption energy parity plots for each adsorbate across all MLPs, either simply or by adsorbate.
 <p float="left">
   <img src="assets/mono_plot.png" width="400" />
   <img src="assets/multi_plot.png" width="400" />
 </p>
 
 ### 2. Comprehensive Performance Table
-View various metrics for all GNNs.
+View various metrics for all MLPs.
 ![Comparison Table](assets/comparison_table.png)
 
 ### 3. Anomaly Analysis
-See how anomalies are detected for all GNNs.
+See how anomalies are detected for all MLPs.
 ![Comparison Table](assets/anomaly_table.png)
 
 ### 4. Analysis by Adsorbate
-Observe how each GNN predicts for each adsorbate.
+Observe how each MLP predicts for each adsorbate.
 ![Comparison Table](assets/adsorbate_comp_table.png)
 
 ## Configuration Options
@@ -245,7 +245,7 @@ Observe how each GNN predicts for each adsorbate.
 ### execute_benchmark / execute_benchmark_OC20
 | Option | Description | Default |
 |--------|-------------|---------|
-| GNN_name | Name of your GNN | Required |
+| MLP_name | Name of your MLP | Required |
 | benchmark | Name of benchmark dataset | Required |
 | F_CRIT_RELAX | Force convergence criterion | 0.05 |
 | N_CRIT_RELAX | Maximum number of steps | 999 |
@@ -260,16 +260,16 @@ Observe how each GNN predicts for each adsorbate.
 ### execute_benchmark_single
 | Option | Description | Default |
 |--------|-------------|---------|
-| GNN_name | Name of your GNN | Required |
+| MLP_name | Name of your MLP | Required |
 | benchmark | Name of benchmark dataset | Required |
 | gas_distance | Cell size for gas molecules | 10 |
 
-### analysis_GNNs
+### analysis_MLPs
 | Option | Description | Default |
 |--------|-------------|---------|
 | Benchmarking_name | Name for output files | Current directory name |
 | calculating_path | Path to result directory | "./result" |
-| GNN_list | List of GNNs to analyze | All GNNs in result directory |
+| MLP_list | List of MLPs to analyze | All MLPs in result directory |
 | target_adsorbates | Target adsorbates to analyze | All adsorbates |
 | specific_color | Color for plots | "black" |
 | min | Axis minimum | Auto-calculated |

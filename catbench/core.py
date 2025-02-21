@@ -71,7 +71,7 @@ def energy_cal_gas(
                 time_init = time.time()
                 logfile = open(log_path, "w", buffering=1)
                 logfile.write("######################\n")
-                logfile.write("##  GNN relax starts  ##\n")
+                logfile.write("##  MLP relax starts  ##\n")
                 logfile.write("######################\n")
                 logfile.write("\nStep 1. Relaxing\n")
 
@@ -151,7 +151,7 @@ def energy_cal(
             time_init = time.time()
             logfile = open(logfile, "w", buffering=1)
             logfile.write("######################\n")
-            logfile.write("##  GNN relax starts  ##\n")
+            logfile.write("##  MLP relax starts  ##\n")
             logfile.write("######################\n")
             logfile.write("\nStep 1. Relaxing\n")
             opt = OptClass(atoms, logfile=logfile, trajectory=filename)
@@ -342,7 +342,7 @@ def read_E0_from_OSZICAR(file_path):
 
 
 def execute_benchmark(calculators, **kwargs):
-    required_keys = ["GNN_name", "benchmark"]
+    required_keys = ["MLP_name", "benchmark"]
 
     if not isinstance(calculators, list) or len(calculators) == 0:
         raise ValueError("Calculators must be a non-empty list.")
@@ -351,7 +351,7 @@ def execute_benchmark(calculators, **kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    GNN_name = kwargs["GNN_name"]
+    MLP_name = kwargs["MLP_name"]
     benchmark = kwargs["benchmark"]
     F_CRIT_RELAX = kwargs.get("F_CRIT_RELAX", 0.05)
     N_CRIT_RELAX = kwargs.get("N_CRIT_RELAX", 999)
@@ -368,8 +368,8 @@ def execute_benchmark(calculators, **kwargs):
     with open(path_pkl, "rb") as file:
         cathub_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result", GNN_name)
-    print(f"Starting {GNN_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result", MLP_name)
+    print(f"Starting {MLP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
@@ -566,13 +566,13 @@ def execute_benchmark(calculators, **kwargs):
             else:
                 final_anomaly["anomaly"].append(key)
 
-            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{GNN_name}_anomaly_detection.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_anomaly_detection.json", "w") as file:
                 json.dump(final_anomaly, file, indent=4)
 
-            with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_gases.json", "w") as file:
                 json.dump(gas_energies, file, indent=4)
 
         except Exception as e:
@@ -580,10 +580,10 @@ def execute_benchmark(calculators, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{GNN_name} Benchmarking Finish")
+    print(f"{MLP_name} Benchmarking Finish")
 
 def execute_benchmark_OC20(calculators, **kwargs):
-    required_keys = ["GNN_name", "benchmark"]
+    required_keys = ["MLP_name", "benchmark"]
 
     if not isinstance(calculators, list) or len(calculators) == 0:
         raise ValueError("Calculators must be a non-empty list.")
@@ -592,7 +592,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    GNN_name = kwargs["GNN_name"]
+    MLP_name = kwargs["MLP_name"]
     benchmark = kwargs["benchmark"]
     F_CRIT_RELAX = kwargs.get("F_CRIT_RELAX", 0.05)
     N_CRIT_RELAX = kwargs.get("N_CRIT_RELAX", 999)
@@ -607,8 +607,8 @@ def execute_benchmark_OC20(calculators, **kwargs):
     with open(path_pkl, "rb") as file:
         cathub_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result", GNN_name)
-    print(f"Starting {GNN_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result", MLP_name)
+    print(f"Starting {MLP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
@@ -725,10 +725,10 @@ def execute_benchmark_OC20(calculators, **kwargs):
             else:
                 final_anomaly["anomaly"].append(key)
 
-            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{GNN_name}_anomaly_detection.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_anomaly_detection.json", "w") as file:
                 json.dump(final_anomaly, file, indent=4)
 
         except Exception as e:
@@ -736,7 +736,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{GNN_name} Benchmarking Finish")
+    print(f"{MLP_name} Benchmarking Finish")
 
 
 def fetch(query):
@@ -970,8 +970,8 @@ def set_matplotlib_font(font_path, font_family):
     else:
         pass
 
-def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
-    plot_save_path = os.path.join(os.getcwd(), "plot", GNN_name)
+def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
+    plot_save_path = os.path.join(os.getcwd(), "plot", MLP_name)
     os.makedirs(plot_save_path, exist_ok=True)
     figsize = kwargs.get("figsize", (9, 8))
     mark_size = kwargs.get("mark_size", 100)
@@ -996,11 +996,11 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
             plot_types = ["anomaly"]
             
         DFT_values = np.concatenate([ads_data["all"][type]["DFT"] for type in plot_types])
-        GNN_values = np.concatenate([ads_data["all"][type]["GNN"] for type in plot_types])
+        MLP_values = np.concatenate([ads_data["all"][type]["MLP"] for type in plot_types])
         
         scatter = ax.scatter(
             DFT_values,
-            GNN_values,
+            MLP_values,
             color=specific_color,
             marker="o",
             s=mark_size,
@@ -1009,13 +1009,13 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
         )
         
         if error_bar_display:
-            GNN_mins = np.concatenate([ads_data["all"][type]["GNN_min"] for type in plot_types])
-            GNN_maxs = np.concatenate([ads_data["all"][type]["GNN_max"] for type in plot_types])
-            yerr_minus = GNN_values - GNN_mins
-            yerr_plus = GNN_maxs - GNN_values
+            MLP_mins = np.concatenate([ads_data["all"][type]["MLP_min"] for type in plot_types])
+            MLP_maxs = np.concatenate([ads_data["all"][type]["MLP_max"] for type in plot_types])
+            yerr_minus = MLP_values - MLP_mins
+            yerr_plus = MLP_maxs - MLP_values
             ax.errorbar(
                 DFT_values,
-                GNN_values,
+                MLP_values,
                 yerr=[yerr_minus, yerr_plus],
                 fmt='none',
                 ecolor="black",
@@ -1026,10 +1026,10 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     else:
         # Single calculation 데이터 플롯
         DFT_values = ads_data["all"]["all"]["DFT"]
-        GNN_values = ads_data["all"]["all"]["GNN"]
+        MLP_values = ads_data["all"]["all"]["MLP"]
         scatter = ax.scatter(
             DFT_values,
-            GNN_values,
+            MLP_values,
             color=specific_color,
             marker="o",
             s=mark_size,
@@ -1041,12 +1041,12 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     ax.set_ylim(min_value, max_value)
     ax.plot([min_value, max_value], [min_value, max_value], "r-")
 
-    MAE = np.sum(np.abs(DFT_values - GNN_values)) / len(DFT_values) if len(DFT_values) != 0 else 0
+    MAE = np.sum(np.abs(DFT_values - MLP_values)) / len(DFT_values) if len(DFT_values) != 0 else 0
 
     ax.text(
         x=0.05,
         y=0.95,
-        s=f"MAE-{GNN_name}: {MAE:.2f}",
+        s=f"MAE-{MLP_name}: {MAE:.2f}",
         transform=plt.gca().transAxes,
         fontsize=30,
         verticalalignment="top",
@@ -1056,7 +1056,7 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     )
 
     ax.set_xlabel("DFT (eV)", fontsize=40)
-    ax.set_ylabel(f"{GNN_name} (eV)", fontsize=40)
+    ax.set_ylabel(f"{MLP_name} (eV)", fontsize=40)
     ax.tick_params(axis="both", which="major", labelsize=20)
     ax.grid(True)
 
@@ -1070,7 +1070,7 @@ def plotter_mono(ads_data, GNN_name, tag, min_value, max_value, **kwargs):
     return MAE
 
 
-def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs):
+def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs):
     colors = [
         "blue",
         "red",
@@ -1160,7 +1160,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
         "v",
         "8",
     ] * 10
-    plot_save_path = os.path.join(os.getcwd(), "plot", GNN_name)
+    plot_save_path = os.path.join(os.getcwd(), "plot", MLP_name)
     os.makedirs(plot_save_path, exist_ok=True)
     figsize = kwargs.get("figsize", (9, 8))
     mark_size = kwargs.get("mark_size", 100)
@@ -1188,25 +1188,25 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     scatter_handles = []
 
     # Check if this is a single calculation by looking at data structure
-    is_single_calc = "GNN_min" not in ads_data["all"].get(types[0], {})
+    is_single_calc = "MLP_min" not in ads_data["all"].get(types[0], {})
 
     for i, adsorbate in enumerate(analysis_adsorbates):
         if "normal" in ads_data["all"]:
             DFT_values = []
-            GNN_values = []
+            MLP_values = []
             for type in types:
                 DFT_values.append(ads_data[adsorbate][type]["DFT"])
-                GNN_values.append(ads_data[adsorbate][type]["GNN"])
+                MLP_values.append(ads_data[adsorbate][type]["MLP"])
         else:
             DFT_values = [ads_data[adsorbate]["all"]["DFT"]]
-            GNN_values = [ads_data[adsorbate]["all"]["GNN"]]
+            MLP_values = [ads_data[adsorbate]["all"]["MLP"]]
                 
         DFT_values = np.concatenate(DFT_values)
-        GNN_values = np.concatenate(GNN_values)
+        MLP_values = np.concatenate(MLP_values)
 
         scatter = ax.scatter(
             DFT_values,
-            GNN_values,
+            MLP_values,
             color=colors[i],
             label=f"* {adsorbate}",
             marker=markers[i],
@@ -1216,21 +1216,21 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
         )
         
         if error_bar_display and not is_single_calc:
-            GNN_mins = []
-            GNN_maxs = []
+            MLP_mins = []
+            MLP_maxs = []
             
             for type in types:
-                GNN_mins.append(ads_data[adsorbate][type]["GNN_min"])
-                GNN_maxs.append(ads_data[adsorbate][type]["GNN_max"])
+                MLP_mins.append(ads_data[adsorbate][type]["MLP_min"])
+                MLP_maxs.append(ads_data[adsorbate][type]["MLP_max"])
                 
-            GNN_mins = np.concatenate(GNN_mins)
-            GNN_maxs = np.concatenate(GNN_maxs)
+            MLP_mins = np.concatenate(MLP_mins)
+            MLP_maxs = np.concatenate(MLP_maxs)
             
-            yerr_minus = GNN_values - GNN_mins
-            yerr_plus = GNN_maxs - GNN_values
+            yerr_minus = MLP_values - MLP_mins
+            yerr_plus = MLP_maxs - MLP_values
             ax.errorbar(
                 DFT_values,
-                GNN_values,
+                MLP_values,
                 yerr=[yerr_minus, yerr_plus],
                 fmt='none',
                 ecolor="black",
@@ -1242,11 +1242,11 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
         scatter_handles.append(scatter)
 
         MAEs[adsorbate] = (
-            np.sum(np.abs(DFT_values - GNN_values)) / len(DFT_values)
+            np.sum(np.abs(DFT_values - MLP_values)) / len(DFT_values)
             if len(DFT_values) != 0
             else 0
         )
-        error_sum += np.sum(np.abs(DFT_values - GNN_values))
+        error_sum += np.sum(np.abs(DFT_values - MLP_values))
         len_total += len(DFT_values)
 
         MAEs[f"len_{adsorbate}"] = len(DFT_values)
@@ -1261,7 +1261,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     ax.text(
         x=0.05,
         y=0.95,
-        s=f"MAE-{GNN_name}: {MAE_total:.2f}",
+        s=f"MAE-{MLP_name}: {MAE_total:.2f}",
         transform=plt.gca().transAxes,
         fontsize=30,
         verticalalignment="top",
@@ -1271,7 +1271,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     )
 
     ax.set_xlabel("DFT (eV)", fontsize=40)
-    ax.set_ylabel(f"{GNN_name} (eV)", fontsize=40)
+    ax.set_ylabel(f"{MLP_name} (eV)", fontsize=40)
     ax.tick_params(axis="both", which="major", labelsize=20)
 
     if (
@@ -1304,7 +1304,7 @@ def plotter_multi(ads_data, GNN_name, types, tag, min_value, max_value, **kwargs
     return MAEs
 
 
-def data_to_excel(main_data, anomaly_data, GNNs_data, analysis_adsorbates, **kwargs):
+def data_to_excel(main_data, anomaly_data, MLPs_data, analysis_adsorbates, **kwargs):
     benchmarking_name = kwargs.get("Benchmarking_name", os.path.basename(os.getcwd()))
 
     df_main = pd.DataFrame(main_data)
@@ -1312,12 +1312,12 @@ def data_to_excel(main_data, anomaly_data, GNNs_data, analysis_adsorbates, **kwa
     output_file = f"{benchmarking_name}_Benchmarking_Analysis.xlsx"
 
     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        df_main.to_excel(writer, sheet_name="GNN_Data", index=False)
+        df_main.to_excel(writer, sheet_name="MLP_Data", index=False)
 
         df_anomaly = pd.DataFrame(anomaly_data)
         df_anomaly.to_excel(writer, sheet_name="anomaly", index=False)
 
-        for GNN_name, data_dict in GNNs_data.items():
+        for MLP_name, data_dict in MLPs_data.items():
             data_tmp = []
             for adsorbate in analysis_adsorbates:
                 if f"len_{adsorbate}" in data_dict["normal"]:
@@ -1340,7 +1340,7 @@ def data_to_excel(main_data, anomaly_data, GNNs_data, analysis_adsorbates, **kwa
                     )
 
             data_df = pd.DataFrame(data_tmp)
-            data_df.to_excel(writer, sheet_name=GNN_name, index=False)
+            data_df.to_excel(writer, sheet_name=MLP_name, index=False)
 
         # 워크북 및 포맷 정의
         workbook = writer.book
@@ -1408,7 +1408,7 @@ def data_to_excel(main_data, anomaly_data, GNNs_data, analysis_adsorbates, **kwa
             worksheet = writer.sheets[sheet_name]
             df = (
                 df_main
-                if sheet_name == "GNN_Data"
+                if sheet_name == "MLP_Data"
                 else (
                     df_anomaly
                     if sheet_name == "anomaly"
@@ -1491,17 +1491,17 @@ def get_ads_eng_range(data_dict):
             
     return min(ads_eng_values), max(ads_eng_values)
 
-def analysis_GNNs(**kwargs):
+def analysis_MLPs(**kwargs):
     main_data = []
     anomaly_data = []
-    GNN_datas = {}
+    MLP_datas = {}
     adsorbates = set()
     calculating_path = kwargs.get(
         "calculating_path", os.path.join(os.getcwd(), "result")
     )
 
-    GNN_list = kwargs.get(
-        "GNN_list",
+    MLP_list = kwargs.get(
+        "MLP_list",
         sorted(
             [
                 name
@@ -1511,31 +1511,31 @@ def analysis_GNNs(**kwargs):
             key=str.lower,
         ),
     )
-    for GNN_name in GNN_list:
-        absolute_energy_GNN = True
+    for MLP_name in MLP_list:
+        absolute_energy_MLP = True
         first_reaction = True
-        print(GNN_name)
-        with open(f"{calculating_path}/{GNN_name}/{GNN_name}_result.json", "r") as f:
-            GNN_result = json.load(f)
+        print(MLP_name)
+        with open(f"{calculating_path}/{MLP_name}/{MLP_name}_result.json", "r") as f:
+            MLP_result = json.load(f)
 
-        with open(f"{calculating_path}/{GNN_name}/{GNN_name}_anomaly_detection.json", "r") as f:
-            GNN_anomaly = json.load(f)
+        with open(f"{calculating_path}/{MLP_name}/{MLP_name}_anomaly_detection.json", "r") as f:
+            MLP_anomaly = json.load(f)
 
         ads_data = {
             "all": {
-                "normal": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
-                "anomaly": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
+                "normal": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
+                "anomaly": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
             }
         }
 
-        for reaction in GNN_result:
-            adsorbate = find_adsorbate(GNN_result[reaction]["cathub"])
+        for reaction in MLP_result:
+            adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
             adsorbates.add(adsorbate)
             
             if first_reaction:
                 first_reaction = False
-                if "slab_conv" not in GNN_result[reaction]["anomalies"]:
-                    absolute_energy_GNN = False
+                if "slab_conv" not in MLP_result[reaction]["anomalies"]:
+                    absolute_energy_MLP = False
 
         time_accum = 0
         step_accum = 0
@@ -1550,47 +1550,47 @@ def analysis_GNNs(**kwargs):
 
         analysis_adsorbates = kwargs.get("target_adsorbates", adsorbates)
 
-        for reaction in GNN_result:
-            adsorbate = find_adsorbate(GNN_result[reaction]["cathub"])
+        for reaction in MLP_result:
+            adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
             if adsorbate in analysis_adsorbates:
                 if adsorbate not in ads_data:
                     ads_data[adsorbate] = {
-                        "normal": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
-                        "anomaly": {"DFT": np.array([]), "GNN": np.array([]), "GNN_min": np.array([]), "GNN_max": np.array([])},
+                        "normal": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
+                        "anomaly": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
                     }
 
-                num_anomalies = sum(GNN_result[reaction]["anomalies"].values())
+                num_anomalies = sum(MLP_result[reaction]["anomalies"].values())
                 
-                GNN_min, GNN_max = get_ads_eng_range(GNN_result[reaction])
+                MLP_min, MLP_max = get_ads_eng_range(MLP_result[reaction])
 
                 # 데이터를 임시 저장할 백업 생성
                 backup = {
                     "normal": {
                         "DFT": ads_data[adsorbate]["normal"]["DFT"].copy(),
-                        "GNN": ads_data[adsorbate]["normal"]["GNN"].copy(),
-                        "GNN_min": ads_data[adsorbate]["normal"]["GNN_min"].copy(),
-                        "GNN_max": ads_data[adsorbate]["normal"]["GNN_max"].copy()
+                        "MLP": ads_data[adsorbate]["normal"]["MLP"].copy(),
+                        "MLP_min": ads_data[adsorbate]["normal"]["MLP_min"].copy(),
+                        "MLP_max": ads_data[adsorbate]["normal"]["MLP_max"].copy()
                     },
                     "anomaly": {
                         "DFT": ads_data[adsorbate]["anomaly"]["DFT"].copy(),
-                        "GNN": ads_data[adsorbate]["anomaly"]["GNN"].copy(),
-                        "GNN_min": ads_data[adsorbate]["anomaly"]["GNN_min"].copy(),
-                        "GNN_max": ads_data[adsorbate]["anomaly"]["GNN_max"].copy()
+                        "MLP": ads_data[adsorbate]["anomaly"]["MLP"].copy(),
+                        "MLP_min": ads_data[adsorbate]["anomaly"]["MLP_min"].copy(),
+                        "MLP_max": ads_data[adsorbate]["anomaly"]["MLP_max"].copy()
                     }
                 }
 
                 backup_all = {
                     "normal": {
                         "DFT": ads_data["all"]["normal"]["DFT"].copy(),
-                        "GNN": ads_data["all"]["normal"]["GNN"].copy(),
-                        "GNN_min": ads_data["all"]["normal"]["GNN_min"].copy(),
-                        "GNN_max": ads_data["all"]["normal"]["GNN_max"].copy()
+                        "MLP": ads_data["all"]["normal"]["MLP"].copy(),
+                        "MLP_min": ads_data["all"]["normal"]["MLP_min"].copy(),
+                        "MLP_max": ads_data["all"]["normal"]["MLP_max"].copy()
                     },
                     "anomaly": {
                         "DFT": ads_data["all"]["anomaly"]["DFT"].copy(),
-                        "GNN": ads_data["all"]["anomaly"]["GNN"].copy(),
-                        "GNN_min": ads_data["all"]["anomaly"]["GNN_min"].copy(),
-                        "GNN_max": ads_data["all"]["anomaly"]["GNN_max"].copy()
+                        "MLP": ads_data["all"]["anomaly"]["MLP"].copy(),
+                        "MLP_min": ads_data["all"]["anomaly"]["MLP_min"].copy(),
+                        "MLP_max": ads_data["all"]["anomaly"]["MLP_max"].copy()
                     }
                 }
 
@@ -1598,68 +1598,68 @@ def analysis_GNNs(**kwargs):
                     if num_anomalies == 0:
                         ads_data[adsorbate]["normal"]["DFT"] = np.append(
                             ads_data[adsorbate]["normal"]["DFT"],
-                            GNN_result[reaction]["cathub"]["ads_eng"],
+                            MLP_result[reaction]["cathub"]["ads_eng"],
                         )
-                        ads_data[adsorbate]["normal"]["GNN"] = np.append(
-                            ads_data[adsorbate]["normal"]["GNN"],
-                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        ads_data[adsorbate]["normal"]["MLP"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLP"],
+                            MLP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data[adsorbate]["normal"]["GNN_min"] = np.append(
-                            ads_data[adsorbate]["normal"]["GNN_min"],
-                            GNN_min,
+                        ads_data[adsorbate]["normal"]["MLP_min"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLP_min"],
+                            MLP_min,
                         )
-                        ads_data[adsorbate]["normal"]["GNN_max"] = np.append(
-                            ads_data[adsorbate]["normal"]["GNN_max"],
-                            GNN_max,
+                        ads_data[adsorbate]["normal"]["MLP_max"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLP_max"],
+                            MLP_max,
                         )
                         ads_data["all"]["normal"]["DFT"] = np.append(
                             ads_data["all"]["normal"]["DFT"],
-                            GNN_result[reaction]["cathub"]["ads_eng"],
+                            MLP_result[reaction]["cathub"]["ads_eng"],
                         )
-                        ads_data["all"]["normal"]["GNN"] = np.append(
-                            ads_data["all"]["normal"]["GNN"],
-                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        ads_data["all"]["normal"]["MLP"] = np.append(
+                            ads_data["all"]["normal"]["MLP"],
+                            MLP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data["all"]["normal"]["GNN_min"] = np.append(
-                            ads_data["all"]["normal"]["GNN_min"],
-                            GNN_min,
+                        ads_data["all"]["normal"]["MLP_min"] = np.append(
+                            ads_data["all"]["normal"]["MLP_min"],
+                            MLP_min,
                         )
-                        ads_data["all"]["normal"]["GNN_max"] = np.append(
-                            ads_data["all"]["normal"]["GNN_max"],
-                            GNN_max,
+                        ads_data["all"]["normal"]["MLP_max"] = np.append(
+                            ads_data["all"]["normal"]["MLP_max"],
+                            MLP_max,
                         )
                     else:
                         ads_data[adsorbate]["anomaly"]["DFT"] = np.append(
                             ads_data[adsorbate]["anomaly"]["DFT"],
-                            GNN_result[reaction]["cathub"]["ads_eng"],
+                            MLP_result[reaction]["cathub"]["ads_eng"],
                         )
-                        ads_data[adsorbate]["anomaly"]["GNN"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["GNN"],
-                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        ads_data[adsorbate]["anomaly"]["MLP"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLP"],
+                            MLP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data[adsorbate]["anomaly"]["GNN_min"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["GNN_min"],
-                            GNN_min,
+                        ads_data[adsorbate]["anomaly"]["MLP_min"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLP_min"],
+                            MLP_min,
                         )
-                        ads_data[adsorbate]["anomaly"]["GNN_max"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["GNN_max"],
-                            GNN_max,
+                        ads_data[adsorbate]["anomaly"]["MLP_max"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLP_max"],
+                            MLP_max,
                         )
                         ads_data["all"]["anomaly"]["DFT"] = np.append(
                             ads_data["all"]["anomaly"]["DFT"],
-                            GNN_result[reaction]["cathub"]["ads_eng"],
+                            MLP_result[reaction]["cathub"]["ads_eng"],
                         )
-                        ads_data["all"]["anomaly"]["GNN"] = np.append(
-                            ads_data["all"]["anomaly"]["GNN"],
-                            GNN_result[reaction]["final"]["ads_eng_median"],
+                        ads_data["all"]["anomaly"]["MLP"] = np.append(
+                            ads_data["all"]["anomaly"]["MLP"],
+                            MLP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data["all"]["anomaly"]["GNN_min"] = np.append(
-                            ads_data["all"]["anomaly"]["GNN_min"],
-                            GNN_min,
+                        ads_data["all"]["anomaly"]["MLP_min"] = np.append(
+                            ads_data["all"]["anomaly"]["MLP_min"],
+                            MLP_min,
                         )
-                        ads_data["all"]["anomaly"]["GNN_max"] = np.append(
-                            ads_data["all"]["anomaly"]["GNN_max"],
-                            GNN_max,
+                        ads_data["all"]["anomaly"]["MLP_max"] = np.append(
+                            ads_data["all"]["anomaly"]["MLP_max"],
+                            MLP_max,
                         )
                 except Exception as e:
                     # 에러 발생 시 백업 데이터로 복원
@@ -1672,40 +1672,40 @@ def analysis_GNNs(**kwargs):
 
                 time_accum += sum(
                     value
-                    for key, value in GNN_result[reaction]["final"].items()
+                    for key, value in MLP_result[reaction]["final"].items()
                     if "time_total" in key
                 )
 
-                log_dir_path = f"{calculating_path}/{GNN_name}/log/{reaction}"
+                log_dir_path = f"{calculating_path}/{MLP_name}/log/{reaction}"
                 txt_files = get_txt_files_in_directory(log_dir_path)
 
                 for txt_file in txt_files:
                     step_tmp = count_lbfgs_steps(txt_file)
                     step_accum += step_tmp
 
-                if absolute_energy_GNN:
-                    if GNN_result[reaction]["anomalies"]["slab_conv"]:
+                if absolute_energy_MLP:
+                    if MLP_result[reaction]["anomalies"]["slab_conv"]:
                         slab_conv += 1
 
-                if GNN_result[reaction]["anomalies"]["ads_conv"]:
+                if MLP_result[reaction]["anomalies"]["ads_conv"]:
                     ads_conv += 1                    
                 
-                if absolute_energy_GNN:
-                    if GNN_result[reaction]["anomalies"]["slab_move"]:
+                if absolute_energy_MLP:
+                    if MLP_result[reaction]["anomalies"]["slab_move"]:
                         slab_move += 1
 
-                if GNN_result[reaction]["anomalies"]["ads_move"]:
+                if MLP_result[reaction]["anomalies"]["ads_move"]:
                         ads_move += 1
 
-                if absolute_energy_GNN:
-                    if GNN_result[reaction]["anomalies"]["slab_seed"]:
+                if absolute_energy_MLP:
+                    if MLP_result[reaction]["anomalies"]["slab_seed"]:
                         slab_seed += 1
 
-                if absolute_energy_GNN:
-                    if GNN_result[reaction]["anomalies"]["ads_seed"]:
+                if absolute_energy_MLP:
+                    if MLP_result[reaction]["anomalies"]["ads_seed"]:
                         ads_seed += 1
 
-                if GNN_result[reaction]["anomalies"]["ads_eng_seed"]:
+                if MLP_result[reaction]["anomalies"]["ads_eng_seed"]:
                     ads_eng_seed += 1
 
         DFT_data = np.concatenate(
@@ -1718,7 +1718,7 @@ def analysis_GNNs(**kwargs):
 
         MAE_all = plotter_mono(
             ads_data,
-            GNN_name,
+            MLP_name,
             "all",
             min_value,
             max_value,
@@ -1726,7 +1726,7 @@ def analysis_GNNs(**kwargs):
         )
         MAE_normal = plotter_mono(
             ads_data,
-            GNN_name,
+            MLP_name,
             "normal",
             min_value,
             max_value,
@@ -1734,7 +1734,7 @@ def analysis_GNNs(**kwargs):
         )
         MAE_anomaly = plotter_mono(
             ads_data,
-            GNN_name,
+            MLP_name,
             "anomaly",
             min_value,
             max_value,
@@ -1743,7 +1743,7 @@ def analysis_GNNs(**kwargs):
 
         MAEs_all_multi = plotter_multi(
             ads_data,
-            GNN_name,
+            MLP_name,
             ["normal", "anomaly"],
             "all",
             min_value,
@@ -1751,13 +1751,13 @@ def analysis_GNNs(**kwargs):
             **kwargs,
         )
         MAEs_normal_multi = plotter_multi(
-            ads_data, GNN_name, ["normal"], "normal", min_value, max_value, **kwargs
+            ads_data, MLP_name, ["normal"], "normal", min_value, max_value, **kwargs
         )
         MAEs_anomaly_multi = plotter_multi(
-            ads_data, GNN_name, ["anomaly"], "anomaly", min_value, max_value, **kwargs
+            ads_data, MLP_name, ["anomaly"], "anomaly", min_value, max_value, **kwargs
         )
 
-        GNN_datas[GNN_name] = {
+        MLP_datas[MLP_name] = {
             "all": MAEs_all_multi,
             "normal": MAEs_normal_multi,
             "anomaly": MAEs_anomaly_multi,
@@ -1770,7 +1770,7 @@ def analysis_GNNs(**kwargs):
 
         main_data.append(
             {
-                "GNN_name": GNN_name,
+                "MLP_name": MLP_name,
                 "Anomaly ratio (%)": anomaly_ratio,
                 "MAE_total (eV)": MAE_all,
                 "MAE_normal (eV)": MAE_normal,
@@ -1778,21 +1778,21 @@ def analysis_GNNs(**kwargs):
                 "Num_total": total_num,
                 "Num_normal": len(ads_data["all"]["normal"]["DFT"]),
                 "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
-                "Time_total (s)": GNN_anomaly["Time"],
+                "Time_total (s)": MLP_anomaly["Time"],
                 "Time_per_step (s)": time_accum / step_accum,
             }
         )
 
         anomaly_data_dict = {
-            "GNN_name": GNN_name,
+            "MLP_name": MLP_name,
             "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
             "ads_conv": ads_conv,
             "ads_move": ads_move,
             "ads_eng_seed": ads_eng_seed,
         }
 
-        # slab 관련 항목들은 absolute_energy_GNN이 true일 때만 추가
-        if absolute_energy_GNN:
+        # slab 관련 항목들은 absolute_energy_MLP이 true일 때만 추가
+        if absolute_energy_MLP:
             anomaly_data_dict.update({
                 "slab_conv": slab_conv,
                 "slab_move": slab_move,
@@ -1803,18 +1803,18 @@ def analysis_GNNs(**kwargs):
         anomaly_data.append(anomaly_data_dict)
 
     data_to_excel(
-        main_data, anomaly_data, GNN_datas, list(analysis_adsorbates), **kwargs
+        main_data, anomaly_data, MLP_datas, list(analysis_adsorbates), **kwargs
     )
 
 
-def analysis_GNNs_single(**kwargs):
+def analysis_MLPs_single(**kwargs):
     main_data = []
-    GNN_datas = {}
+    MLP_datas = {}
     adsorbates = set()
     single_path = kwargs.get("single_path", os.path.join(os.getcwd(), "result_single"))
     if os.path.exists(single_path):
-        GNN_single_list = kwargs.get(
-            "GNN_list",
+        MLP_single_list = kwargs.get(
+            "MLP_list",
             sorted(
                 [
                     name
@@ -1825,51 +1825,51 @@ def analysis_GNNs_single(**kwargs):
             ),
         )
 
-        for GNN_name in GNN_single_list:
-            print(GNN_name)
-            with open(f"{single_path}/{GNN_name}/{GNN_name}_result.json", "r") as f:
-                GNN_result = json.load(f)
+        for MLP_name in MLP_single_list:
+            print(MLP_name)
+            with open(f"{single_path}/{MLP_name}/{MLP_name}_result.json", "r") as f:
+                MLP_result = json.load(f)
 
             # 데이터 구조 수정
             ads_data = {
                 "all": {
-                    "all": {"DFT": np.array([]), "GNN": np.array([])}  # 'all' 키를 한 단계 더 추가
+                    "all": {"DFT": np.array([]), "MLP": np.array([])}  # 'all' 키를 한 단계 더 추가
                 }
             }
 
-            for reaction in GNN_result:
-                adsorbate = find_adsorbate(GNN_result[reaction]["cathub"])
+            for reaction in MLP_result:
+                adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
                 adsorbates.add(adsorbate)
 
             analysis_adsorbates = kwargs.get("target_adsorbates", adsorbates)
 
-            for reaction in GNN_result:
-                adsorbate = find_adsorbate(GNN_result[reaction]["cathub"])
+            for reaction in MLP_result:
+                adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
                 if adsorbate in analysis_adsorbates:
                     if adsorbate not in ads_data:
                         ads_data[adsorbate] = {
-                            "all": {"DFT": np.array([]), "GNN": np.array([])}
+                            "all": {"DFT": np.array([]), "MLP": np.array([])}
                         }
 
                     ads_data[adsorbate]["all"]["DFT"] = np.append(
                         ads_data[adsorbate]["all"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
+                        MLP_result[reaction]["cathub"]["ads_eng"],
                     )
-                    ads_data[adsorbate]["all"]["GNN"] = np.append(
-                        ads_data[adsorbate]["all"]["GNN"],
-                        GNN_result[reaction]["SC_calc"]["ads_eng"],
+                    ads_data[adsorbate]["all"]["MLP"] = np.append(
+                        ads_data[adsorbate]["all"]["MLP"],
+                        MLP_result[reaction]["SC_calc"]["ads_eng"],
                     )
                     ads_data["all"]["all"]["DFT"] = np.append(
                         ads_data["all"]["all"]["DFT"],
-                        GNN_result[reaction]["cathub"]["ads_eng"],
+                        MLP_result[reaction]["cathub"]["ads_eng"],
                     )
-                    ads_data["all"]["all"]["GNN"] = np.append(
-                        ads_data["all"]["all"]["GNN"],
-                        GNN_result[reaction]["SC_calc"]["ads_eng"],
+                    ads_data["all"]["all"]["MLP"] = np.append(
+                        ads_data["all"]["all"]["MLP"],
+                        MLP_result[reaction]["SC_calc"]["ads_eng"],
                     )
 
             DFT_data = ads_data["all"]["all"]["DFT"]
-            GNN_data = ads_data["all"]["all"]["GNN"]
+            MLP_data = ads_data["all"]["all"]["MLP"]
 
             min_value_DFT, max_value_DFT = min_max(DFT_data)
 
@@ -1877,12 +1877,12 @@ def analysis_GNNs_single(**kwargs):
             max_value = kwargs.get("max", max_value_DFT)
 
             MAE_all = plotter_mono(
-                ads_data, GNN_name, "single", min_value, max_value, **kwargs
+                ads_data, MLP_name, "single", min_value, max_value, **kwargs
             )
 
             MAEs_all_multi = plotter_multi(
                 ads_data,
-                GNN_name,
+                MLP_name,
                 ["all"],  # 여기서 'all'을 리스트로 전달
                 "single",
                 min_value,
@@ -1890,24 +1890,24 @@ def analysis_GNNs_single(**kwargs):
                 **kwargs,
             )
 
-            GNN_datas[GNN_name] = MAEs_all_multi
+            MLP_datas[MLP_name] = MAEs_all_multi
             total_num = len(DFT_data)
 
             main_data.append(
-                {"GNN_name": GNN_name, "MAE (eV)": MAE_all, "Num_total": total_num}
+                {"MLP_name": MLP_name, "MAE (eV)": MAE_all, "Num_total": total_num}
             )
 
-        data_to_excel_single(main_data, GNN_datas, list(analysis_adsorbates), **kwargs)
+        data_to_excel_single(main_data, MLP_datas, list(analysis_adsorbates), **kwargs)
 
 
 def execute_benchmark_single(calculator, **kwargs):
-    required_keys = ["GNN_name", "benchmark"]
+    required_keys = ["MLP_name", "benchmark"]
 
     for key in required_keys:
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    GNN_name = kwargs["GNN_name"]
+    MLP_name = kwargs["MLP_name"]
     benchmark = kwargs["benchmark"]
     gas_distance = kwargs.get("gas_distance", 10)
     rate = kwargs.get("rate", 0.5)
@@ -1917,8 +1917,8 @@ def execute_benchmark_single(calculator, **kwargs):
     with open(path_pkl, "rb") as file:
         cathub_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result_single", GNN_name)
-    print(f"Starting {GNN_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result_single", MLP_name)
+    print(f"Starting {MLP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/structures", exist_ok=True)
     os.makedirs(f"{save_directory}/gases", exist_ok=True)
@@ -2002,10 +2002,10 @@ def execute_benchmark_single(calculator, **kwargs):
                 "ads_abs": ads_energy,
             }
 
-            with open(f"{save_directory}/{GNN_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{GNN_name}_gases.json", "w") as file:
+            with open(f"{save_directory}/{MLP_name}_gases.json", "w") as file:
                 json.dump(gas_energies, file, indent=4)
 
         except Exception as e:
@@ -2013,10 +2013,10 @@ def execute_benchmark_single(calculator, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{GNN_name} Benchmarking Finish")
+    print(f"{MLP_name} Benchmarking Finish")
 
 
-def data_to_excel_single(main_data, GNNs_data, analysis_adsorbates, **kwargs):
+def data_to_excel_single(main_data, MLPs_data, analysis_adsorbates, **kwargs):
     benchmarking_name = kwargs.get("Benchmarking_name", os.path.basename(os.getcwd()))
 
     df_main = pd.DataFrame(main_data)
@@ -2024,9 +2024,9 @@ def data_to_excel_single(main_data, GNNs_data, analysis_adsorbates, **kwargs):
     output_file = f"{benchmarking_name}_Single_Benchmarking_Analysis.xlsx"
 
     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        df_main.to_excel(writer, sheet_name="GNN_Data", index=False)
+        df_main.to_excel(writer, sheet_name="MLP_Data", index=False)
 
-        for GNN_name, data_dict in GNNs_data.items():
+        for MLP_name, data_dict in MLPs_data.items():
             data_tmp = []
             for adsorbate in analysis_adsorbates:
                 if f"len_{adsorbate}" in data_dict:
@@ -2039,7 +2039,7 @@ def data_to_excel_single(main_data, GNNs_data, analysis_adsorbates, **kwargs):
                     )
 
             data_df = pd.DataFrame(data_tmp)
-            data_df.to_excel(writer, sheet_name=GNN_name, index=False)
+            data_df.to_excel(writer, sheet_name=MLP_name, index=False)
 
         # 워크북 및 포맷 정의
         workbook = writer.book
@@ -2083,7 +2083,7 @@ def data_to_excel_single(main_data, GNNs_data, analysis_adsorbates, **kwargs):
         for sheet_name in writer.sheets:
             worksheet = writer.sheets[sheet_name]
             df = (
-                df_main if sheet_name == "GNN_Data" 
+                df_main if sheet_name == "MLP_Data" 
                 else pd.DataFrame(data_tmp)
             )
 

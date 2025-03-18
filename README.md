@@ -267,8 +267,9 @@ Observe how each MLP predicts for each adsorbate.
 | Option | Description | Default |
 |--------|-------------|---------|
 | MLP_name | Name of your MLP | Required |
-| benchmark | Name of benchmark dataset | Required |
+| benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
 | gas_distance | Cell size for gas molecules | 10 |
+| optimizer | Optimization algorithm for gas molecule relaxation | "LBFGS" |
 
 ### analysis_MLPs
 | Option | Description | Default |

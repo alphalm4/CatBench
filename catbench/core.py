@@ -816,7 +816,7 @@ def aseify_reactions(reactions):
         }
 
 
-def cathub_preprocess(benchmark):
+def cathub_preprocess(benchmark, adsorbate_integration=None):
     save_directory = os.path.join(os.getcwd(), "raw_data")
     os.makedirs(save_directory, exist_ok=True)
     
@@ -959,6 +959,17 @@ def cathub_preprocess(benchmark):
                         if tag in tags:
                             tags.remove(tag)
                         continue
+
+                # 여기서 adsorbate_integration 처리
+                if adsorbate_integration:
+                    for key in list(data_total[tag]["raw"].keys()):  # list()로 복사하여 순회 중 수정 가능하게 함
+                        if "star" in key and key != "star":  # star가 포함되어 있고, "star" 자체는 제외
+                            adsorbate = key[:-4]  # "star" 부분 제거하여 adsorbate 추출
+                            if adsorbate in adsorbate_integration:
+                                # 새로운 키 생성
+                                new_key = f"{adsorbate_integration[adsorbate]}star"
+                                # raw 딕셔너리 내의 키 변경
+                                data_total[tag]["raw"][new_key] = data_total[tag]["raw"].pop(key)
 
             except Exception as e:
                 traceback.print_exc()
@@ -1940,7 +1951,7 @@ def execute_benchmark_single(calculator, **kwargs):
     MLP_name = kwargs["MLP_name"]
     benchmark = kwargs["benchmark"]
     gas_distance = kwargs.get("gas_distance", 10)
-    rate = kwargs.get("rate", 0.5)
+    optimizer = kwargs.get("optimizer", "LBFGS")
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
@@ -1968,24 +1979,10 @@ def execute_benchmark_single(calculator, **kwargs):
             final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
             for structure in cathub_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
-                        "raw"
-                    ][structure]["energy_cathub"]
-            final_result[key]["anomalies"] = {
-                "ads_conv": 0,
-                "ads_move": 0,
-                "ads_eng_seed": 0,
-            }
-
-            trag_path = f"{save_directory}/traj/{key}"
-            log_path = f"{save_directory}/log/{key}"
-
-            os.makedirs(trag_path, exist_ok=True)
-            os.makedirs(log_path, exist_ok=True)
-
-            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
-            z_target = fix_z(POSCAR_star, rate)
-
+                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key]["raw"][structure]["energy_cathub"]
+                    
+            structure_path = f"{save_directory}/structures/{key}"
+            os.makedirs(structure_path, exist_ok=True)
             informs = {}
             informs["ads_eng"] = []
 
@@ -1993,7 +1990,7 @@ def execute_benchmark_single(calculator, **kwargs):
             for structure in cathub_data[key]["raw"]:
                 if "gas" not in str(structure):
                     POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
-                    write(f"{trag_path}/CONTCAR_{structure}", POSCAR_str)
+                    write(f"{structure_path}/CONTCAR_{structure}", POSCAR_str)
                     energy_calculated = energy_cal_single(calculator, POSCAR_str)
                     ads_energy_calc += (
                         energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
@@ -2017,6 +2014,7 @@ def execute_benchmark_single(calculator, **kwargs):
                             0.05,
                             f"{save_directory}/gases/POSCAR_{structure}",
                             gas_distance,
+                            optimizer,
                             f"{save_directory}/gases/{structure}.txt",
                             f"{save_directory}/gases/{structure}",
                         )

@@ -23,14 +23,20 @@ CatBench supports two types of data sources:
 import catbench
 
 # Process data from Catalysis-Hub
+# Single tag
 catbench.cathub_preprocess("Catalysis-Hub_Dataset_tag")
+
+# Multiple tags
+catbench.cathub_preprocess(["Catalysis-Hub_Dataset_tag1", "Catalysis-Hub_Dataset_tag2"])
 ```
 
 **Example:**
 ```python
-# Process specific dataset from Catalysis-Hub
-# Using AraComputational2022 as an example
+# Single tag example
 catbench.cathub_preprocess("AraComputational2022")
+
+# Multiple tags example
+catbench.cathub_preprocess(["AraComputational2022", "AlonsoStrain2023"])
 ```
 
 #### B. User Dataset
@@ -246,7 +252,7 @@ Observe how each MLP predicts for each adsorbate.
 | Option | Description | Default |
 |--------|-------------|---------|
 | MLP_name | Name of your MLP | Required |
-| benchmark | Name of benchmark dataset | Required |
+| benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
 | F_CRIT_RELAX | Force convergence criterion | 0.05 |
 | N_CRIT_RELAX | Maximum number of steps | 999 |
 | rate | Fix ratio for surface atoms (0: use original constraints, >0: fix atoms from bottom up to specified ratio) | 0.5 |

@@ -16,6 +16,7 @@ import matplotlib.font_manager as fm
 import pandas as pd
 import xlsxwriter
 import traceback
+import yaml
 
 GRAPHQL = "http://api.catalysis-hub.org/graphql"
 
@@ -818,19 +819,48 @@ def aseify_reactions(reactions):
 def cathub_preprocess(benchmark):
     save_directory = os.path.join(os.getcwd(), "raw_data")
     os.makedirs(save_directory, exist_ok=True)
-    path_json = os.path.join(save_directory, f"{benchmark}.json")
-    path_output = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
-    if not os.path.exists(path_output):
+    
+    # Convert single string to list for uniform processing
+    benchmarks = [benchmark] if isinstance(benchmark, str) else benchmark
+    
+    # Initialize combined data structure
+    combined_reactions = []
+    
+    for bench in benchmarks:
+        path_json = os.path.join(save_directory, f"{bench}.json")
+        
+        # Get reactions for current benchmark
         if not os.path.exists(path_json):
-            raw_reactions = reactions_from_dataset(benchmark)
+            raw_reactions = reactions_from_dataset(bench)
             raw_reactions_json = {"raw_reactions": raw_reactions}
             with open(path_json, "w") as file:
                 json.dump(raw_reactions_json, file, indent=4)
-
-        with open(path_json, "r") as f:
-            data = json.load(f)
-        loaded_data = data["raw_reactions"]
-        dat = copy.deepcopy(loaded_data)
+        else:
+            with open(path_json, "r") as file:
+                raw_reactions_json = json.load(file)
+                
+        combined_reactions.extend(raw_reactions_json["raw_reactions"])
+    
+    # Generate output filename based on input type
+    if isinstance(benchmark, str):
+        output_name = benchmark
+    else:
+        output_name = "multiple_tag"
+        # Save benchmark information to yaml file
+        benchmark_info = {
+            "benchmarks": sorted(benchmarks),
+            "creation_date": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_reactions": len(combined_reactions)
+        }
+        yaml_path = os.path.join(save_directory, f"{output_name}.yml")
+        with open(yaml_path, "w") as yaml_file:
+            yaml.dump(benchmark_info, yaml_file, default_flow_style=False)
+    
+    path_output = os.path.join(os.getcwd(), f"raw_data/{output_name}.pkl")
+    
+    if not os.path.exists(path_output):
+        # Process combined reactions
+        dat = copy.deepcopy(combined_reactions)
         aseify_reactions(dat)
 
         data_total = {}

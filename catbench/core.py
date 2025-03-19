@@ -308,7 +308,7 @@ def userdata_preprocess(dataset_name):
                 data_total[tag] = {}
 
                 data_total[tag]["raw"] = input
-                data_total[tag]["ref_eds_eng"] = energy_check
+                data_total[tag]["ref_ads_eng"] = energy_check
 
     print(f"# of reactions : {len(data_total)}")
 
@@ -398,7 +398,7 @@ def execute_benchmark(calculators, **kwargs):
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
             final_result[key]["reference"] = {}
-            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_ads_eng"]
             for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
                     final_result[key]["reference"][f"{structure}_abs"] = ref_data[key][
@@ -631,7 +631,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
             final_result[key]["reference"] = {}
-            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_ads_eng"]
             for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
                     final_result[key]["reference"][f"{structure}_abs"] = ref_data[key][
@@ -925,7 +925,7 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
 
                 data_total[tag] = {}
                 data_total[tag]["raw"] = input
-                data_total[tag]["ref_eds_eng"] = dat[i]["reactionEnergy"]
+                data_total[tag]["ref_ads_eng"] = dat[i]["reactionEnergy"]
                 energy_check = 0
                 energy_check_slab_1 = 0
                 star_num = 0
@@ -951,7 +951,7 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
                 if dat[i]["reactionEnergy"] - energy_check > 0.001:
                     if dat[i]["reactionEnergy"] - energy_check_slab_1 < 0.001:
                         data_total[tag]["raw"] = input_slab_1_check
-                        data_total[tag]["ref_eds_eng"] = dat[i]["reactionEnergy"]
+                        data_total[tag]["ref_ads_eng"] = dat[i]["reactionEnergy"]
                     else:
                         print(f"Error at {tag}: Reaction energy check failed")
                         if tag in data_total:
@@ -1976,7 +1976,7 @@ def execute_benchmark_single(calculator, **kwargs):
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
             final_result[key]["reference"] = {}
-            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_ads_eng"]
             for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
                     final_result[key]["reference"][f"{structure}_abs"] = ref_data[key]["raw"][structure]["energy_ref"]

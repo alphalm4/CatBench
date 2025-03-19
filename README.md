@@ -1,5 +1,5 @@
 # CatBench
-CatBench: Benchmark Framework for Machine Learning Potentials in Adsorption Energy Predictions
+CatBench: Benchmark Framework for Machine Learning Interatomic Potentials in Adsorption Energy Predictions
 
 ## Installation
 
@@ -9,7 +9,7 @@ pip install catbench
 
 ## Overview
 ![CatBench Schematic](assets/CatBench_Schematic.png)
-CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Potentials (MLIPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
+CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Interatomic Potentials (MLIPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
 
 ## Usage Workflow
 

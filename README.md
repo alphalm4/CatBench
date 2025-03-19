@@ -56,8 +56,8 @@ catbench.cathub_preprocess(
     ["Catalysis-Hub_Dataset_tag1", "Catalysis-Hub_Dataset_tag2"],
     adsorbate_integration={
         'HO': 'OH',
-        'CO2': 'OCO',
-        'COOH': 'HOCO'
+        'O2H': 'OOH',
+        'CO2H': 'COOH'
     }
 )
 ```

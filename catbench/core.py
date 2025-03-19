@@ -72,7 +72,7 @@ def energy_cal_gas(
                 time_init = time.time()
                 logfile = open(log_path, "w", buffering=1)
                 logfile.write("######################\n")
-                logfile.write("##  MLP relax starts  ##\n")
+                logfile.write("##  MLIP relax starts  ##\n")
                 logfile.write("######################\n")
                 logfile.write("\nStep 1. Relaxing\n")
 
@@ -152,7 +152,7 @@ def energy_cal(
             time_init = time.time()
             logfile = open(logfile, "w", buffering=1)
             logfile.write("######################\n")
-            logfile.write("##  MLP relax starts  ##\n")
+            logfile.write("##  MLIP relax starts  ##\n")
             logfile.write("######################\n")
             logfile.write("\nStep 1. Relaxing\n")
             opt = OptClass(atoms, logfile=logfile, trajectory=filename)
@@ -280,13 +280,13 @@ def userdata_preprocess(dataset_name):
                 input["star"] = {
                     "stoi": coeff["slab"],
                     "atoms": read(f"{slab_path}/slab/CONTCAR"),
-                    "energy_cathub": read_E0_from_OSZICAR(f"{slab_path}/slab/OSZICAR"),
+                    "energy_ref": read_E0_from_OSZICAR(f"{slab_path}/slab/OSZICAR"),
                 }
 
                 input[f"{rxn_name}star"] = {
                     "stoi": coeff["adslab"],
                     "atoms": read(f"{dirpath}/CONTCAR"),
-                    "energy_cathub": read_E0_from_OSZICAR(f"{dirpath}/OSZICAR"),
+                    "energy_ref": read_E0_from_OSZICAR(f"{dirpath}/OSZICAR"),
                 }
 
                 for key in coeff:
@@ -294,7 +294,7 @@ def userdata_preprocess(dataset_name):
                         input[key] = {
                             "stoi": coeff[key],
                             "atoms": read(f"{dataset_name}/gas/{key}/CONTCAR"),
-                            "energy_cathub": read_E0_from_OSZICAR(
+                            "energy_ref": read_E0_from_OSZICAR(
                                 f"{dataset_name}/gas/{key}/OSZICAR"
                             ),
                         }
@@ -302,13 +302,13 @@ def userdata_preprocess(dataset_name):
                 energy_check = 0
                 for structure in input:
                     energy_check += (
-                        input[structure]["energy_cathub"] * input[structure]["stoi"]
+                        input[structure]["energy_ref"] * input[structure]["stoi"]
                     )
 
                 data_total[tag] = {}
 
                 data_total[tag]["raw"] = input
-                data_total[tag]["cathub_energy"] = energy_check
+                data_total[tag]["ref_eds_eng"] = energy_check
 
     print(f"# of reactions : {len(data_total)}")
 
@@ -343,7 +343,7 @@ def read_E0_from_OSZICAR(file_path):
 
 
 def execute_benchmark(calculators, **kwargs):
-    required_keys = ["MLP_name", "benchmark"]
+    required_keys = ["MLIP_name", "benchmark"]
 
     if not isinstance(calculators, list) or len(calculators) == 0:
         raise ValueError("Calculators must be a non-empty list.")
@@ -352,7 +352,7 @@ def execute_benchmark(calculators, **kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    MLP_name = kwargs["MLP_name"]
+    MLIP_name = kwargs["MLIP_name"]
     benchmark = kwargs["benchmark"]
     F_CRIT_RELAX = kwargs.get("F_CRIT_RELAX", 0.05)
     N_CRIT_RELAX = kwargs.get("N_CRIT_RELAX", 999)
@@ -367,10 +367,10 @@ def execute_benchmark(calculators, **kwargs):
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
     with open(path_pkl, "rb") as file:
-        cathub_data = pickle.load(file)
+        ref_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result", MLP_name)
-    print(f"Starting {MLP_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result", MLIP_name)
+    print(f"Starting {MLIP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
@@ -393,17 +393,17 @@ def execute_benchmark(calculators, **kwargs):
     gas_energies = {}
 
     print("Starting calculations...")
-    for index, key in enumerate(cathub_data):
+    for index, key in enumerate(ref_data):
         try:
-            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
-            final_result[key]["cathub"] = {}
-            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-            for structure in cathub_data[key]["raw"]:
+            final_result[key]["reference"] = {}
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                    final_result[key]["reference"][f"{structure}_abs"] = ref_data[key][
                         "raw"
-                    ][structure]["energy_cathub"]
+                    ][structure]["energy_ref"]
             final_result[key]["anomalies"] = {
                 "slab_conv": 0,
                 "ads_conv": 0,
@@ -420,7 +420,7 @@ def execute_benchmark(calculators, **kwargs):
             os.makedirs(trag_path, exist_ok=True)
             os.makedirs(log_path, exist_ok=True)
 
-            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+            POSCAR_star = ref_data[key]["raw"]["star"]["atoms"]
             z_target = fix_z(POSCAR_star, rate)
 
             informs = {}
@@ -435,9 +435,9 @@ def execute_benchmark(calculators, **kwargs):
 
             for i in range(len(calculators)):
                 ads_energy_calc = 0
-                for structure in cathub_data[key]["raw"]:
+                for structure in ref_data[key]["raw"]:
                     if "gas" not in str(structure):
-                        POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                        POSCAR_str = ref_data[key]["raw"][structure]["atoms"]
                         (
                             energy_calculated,
                             steps_calculated,
@@ -455,7 +455,7 @@ def execute_benchmark(calculators, **kwargs):
                             f"{trag_path}/{structure}_{i}",
                         )
                         ads_energy_calc += (
-                            energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
+                            energy_calculated * ref_data[key]["raw"][structure]["stoi"]
                         )
                         accum_time += time_calculated
                         if structure == "star":
@@ -479,13 +479,13 @@ def execute_benchmark(calculators, **kwargs):
                         if gas_tag in gas_energies:
                             ads_energy_calc += (
                                 gas_energies[gas_tag]
-                                * cathub_data[key]["raw"][structure]["stoi"]
+                                * ref_data[key]["raw"][structure]["stoi"]
                             )
                         else:
                             print(f"{gas_tag} calculating")
                             gas_CONTCAR, gas_energy = energy_cal_gas(
                                 calculators[i],
-                                cathub_data[key]["raw"][structure]["atoms"],
+                                ref_data[key]["raw"][structure]["atoms"],
                                 F_CRIT_RELAX,
                                 f"{save_directory}/gases/POSCARs/POSCAR_{gas_tag}",
                                 gas_distance,
@@ -495,7 +495,7 @@ def execute_benchmark(calculators, **kwargs):
                             )
                             gas_energies[gas_tag] = gas_energy
                             ads_energy_calc += (
-                                gas_energy * cathub_data[key]["raw"][structure]["stoi"]
+                                gas_energy * ref_data[key]["raw"][structure]["stoi"]
                             )
                             write(
                                 f"{save_directory}/gases/CONTCARs/CONTCAR_{gas_tag}",
@@ -567,13 +567,13 @@ def execute_benchmark(calculators, **kwargs):
             else:
                 final_anomaly["anomaly"].append(key)
 
-            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{MLP_name}_anomaly_detection.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "w") as file:
                 json.dump(final_anomaly, file, indent=4)
 
-            with open(f"{save_directory}/{MLP_name}_gases.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_gases.json", "w") as file:
                 json.dump(gas_energies, file, indent=4)
 
         except Exception as e:
@@ -581,10 +581,10 @@ def execute_benchmark(calculators, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{MLP_name} Benchmarking Finish")
+    print(f"{MLIP_name} Benchmarking Finish")
 
 def execute_benchmark_OC20(calculators, **kwargs):
-    required_keys = ["MLP_name", "benchmark"]
+    required_keys = ["MLIP_name", "benchmark"]
 
     if not isinstance(calculators, list) or len(calculators) == 0:
         raise ValueError("Calculators must be a non-empty list.")
@@ -593,7 +593,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    MLP_name = kwargs["MLP_name"]
+    MLIP_name = kwargs["MLIP_name"]
     benchmark = kwargs["benchmark"]
     F_CRIT_RELAX = kwargs.get("F_CRIT_RELAX", 0.05)
     N_CRIT_RELAX = kwargs.get("N_CRIT_RELAX", 999)
@@ -606,10 +606,10 @@ def execute_benchmark_OC20(calculators, **kwargs):
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
     with open(path_pkl, "rb") as file:
-        cathub_data = pickle.load(file)
+        ref_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result", MLP_name)
-    print(f"Starting {MLP_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result", MLIP_name)
+    print(f"Starting {MLIP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
@@ -626,17 +626,17 @@ def execute_benchmark_OC20(calculators, **kwargs):
     accum_time = 0
 
     print("Starting calculations...")
-    for index, key in enumerate(cathub_data):
+    for index, key in enumerate(ref_data):
         try:
-            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
-            final_result[key]["cathub"] = {}
-            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-            for structure in cathub_data[key]["raw"]:
+            final_result[key]["reference"] = {}
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key][
+                    final_result[key]["reference"][f"{structure}_abs"] = ref_data[key][
                         "raw"
-                    ][structure]["energy_cathub"]
+                    ][structure]["energy_ref"]
             final_result[key]["anomalies"] = {
                 "ads_conv": 0,
                 "ads_move": 0,
@@ -649,7 +649,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
             os.makedirs(trag_path, exist_ok=True)
             os.makedirs(log_path, exist_ok=True)
 
-            POSCAR_star = cathub_data[key]["raw"]["star"]["atoms"]
+            POSCAR_star = ref_data[key]["raw"]["star"]["atoms"]
             z_target = fix_z(POSCAR_star, rate)
 
             informs = {}
@@ -660,9 +660,9 @@ def execute_benchmark_OC20(calculators, **kwargs):
 
             for i in range(len(calculators)):
                 ads_energy_calc = 0
-                for structure in cathub_data[key]["raw"]:
+                for structure in ref_data[key]["raw"]:
                     if "gas" not in str(structure) and structure != "star":
-                        POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                        POSCAR_str = ref_data[key]["raw"][structure]["atoms"]
                         (
                             ads_energy,
                             steps_calculated,
@@ -726,10 +726,10 @@ def execute_benchmark_OC20(calculators, **kwargs):
             else:
                 final_anomaly["anomaly"].append(key)
 
-            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{MLP_name}_anomaly_detection.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "w") as file:
                 json.dump(final_anomaly, file, indent=4)
 
         except Exception as e:
@@ -737,7 +737,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{MLP_name} Benchmarking Finish")
+    print(f"{MLIP_name} Benchmarking Finish")
 
 
 def fetch(query):
@@ -904,28 +904,28 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
                         input[key] = {
                             "stoi": -reactants_dict[key],
                             "atoms": dat[i]["reactionSystems"][key]["atoms"],
-                            "energy_cathub": dat[i]["reactionSystems"][key]["energy"],
+                            "energy_ref": dat[i]["reactionSystems"][key]["energy"],
                         }
                         input_slab_1_check[key] = {
                             "stoi": -reactants_dict[key],
                             "atoms": dat[i]["reactionSystems"][key]["atoms"],
-                            "energy_cathub": dat[i]["reactionSystems"][key]["energy"],
+                            "energy_ref": dat[i]["reactionSystems"][key]["energy"],
                         }
                     elif key in products_dict:
                         input[key] = {
                             "stoi": products_dict[key],
                             "atoms": dat[i]["reactionSystems"][key]["atoms"],
-                            "energy_cathub": dat[i]["reactionSystems"][key]["energy"],
+                            "energy_ref": dat[i]["reactionSystems"][key]["energy"],
                         }
                         input_slab_1_check[key] = {
                             "stoi": 1,
                             "atoms": dat[i]["reactionSystems"][key]["atoms"],
-                            "energy_cathub": dat[i]["reactionSystems"][key]["energy"],
+                            "energy_ref": dat[i]["reactionSystems"][key]["energy"],
                         }
 
                 data_total[tag] = {}
                 data_total[tag]["raw"] = input
-                data_total[tag]["cathub_energy"] = dat[i]["reactionEnergy"]
+                data_total[tag]["ref_eds_eng"] = dat[i]["reactionEnergy"]
                 energy_check = 0
                 energy_check_slab_1 = 0
                 star_num = 0
@@ -933,10 +933,10 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
                     if "star" in str(structure):
                         star_num += 1
                     energy_check += (
-                        input[structure]["energy_cathub"] * input[structure]["stoi"]
+                        input[structure]["energy_ref"] * input[structure]["stoi"]
                     )
                     energy_check_slab_1 += (
-                        input_slab_1_check[structure]["energy_cathub"]
+                        input_slab_1_check[structure]["energy_ref"]
                         * input_slab_1_check[structure]["stoi"]
                     )
 
@@ -951,7 +951,7 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
                 if dat[i]["reactionEnergy"] - energy_check > 0.001:
                     if dat[i]["reactionEnergy"] - energy_check_slab_1 < 0.001:
                         data_total[tag]["raw"] = input_slab_1_check
-                        data_total[tag]["cathub_energy"] = dat[i]["reactionEnergy"]
+                        data_total[tag]["ref_eds_eng"] = dat[i]["reactionEnergy"]
                     else:
                         print(f"Error at {tag}: Reaction energy check failed")
                         if tag in data_total:
@@ -1011,8 +1011,8 @@ def set_matplotlib_font(font_path, font_family):
     else:
         pass
 
-def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
-    plot_save_path = os.path.join(os.getcwd(), "plot", MLP_name)
+def plotter_mono(ads_data, MLIP_name, tag, min_value, max_value, **kwargs):
+    plot_save_path = os.path.join(os.getcwd(), "plot", MLIP_name)
     os.makedirs(plot_save_path, exist_ok=True)
     figsize = kwargs.get("figsize", (9, 8))
     mark_size = kwargs.get("mark_size", 100)
@@ -1037,11 +1037,11 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
             plot_types = ["anomaly"]
             
         DFT_values = np.concatenate([ads_data["all"][type]["DFT"] for type in plot_types])
-        MLP_values = np.concatenate([ads_data["all"][type]["MLP"] for type in plot_types])
+        MLIP_values = np.concatenate([ads_data["all"][type]["MLIP"] for type in plot_types])
         
         scatter = ax.scatter(
             DFT_values,
-            MLP_values,
+            MLIP_values,
             color=specific_color,
             marker="o",
             s=mark_size,
@@ -1050,13 +1050,13 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
         )
         
         if error_bar_display:
-            MLP_mins = np.concatenate([ads_data["all"][type]["MLP_min"] for type in plot_types])
-            MLP_maxs = np.concatenate([ads_data["all"][type]["MLP_max"] for type in plot_types])
-            yerr_minus = MLP_values - MLP_mins
-            yerr_plus = MLP_maxs - MLP_values
+            MLIP_mins = np.concatenate([ads_data["all"][type]["MLIP_min"] for type in plot_types])
+            MLIP_maxs = np.concatenate([ads_data["all"][type]["MLIP_max"] for type in plot_types])
+            yerr_minus = MLIP_values - MLIP_mins
+            yerr_plus = MLIP_maxs - MLIP_values
             ax.errorbar(
                 DFT_values,
-                MLP_values,
+                MLIP_values,
                 yerr=[yerr_minus, yerr_plus],
                 fmt='none',
                 ecolor="black",
@@ -1067,10 +1067,10 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
     else:
         # Single calculation 데이터 플롯
         DFT_values = ads_data["all"]["all"]["DFT"]
-        MLP_values = ads_data["all"]["all"]["MLP"]
+        MLIP_values = ads_data["all"]["all"]["MLIP"]
         scatter = ax.scatter(
             DFT_values,
-            MLP_values,
+            MLIP_values,
             color=specific_color,
             marker="o",
             s=mark_size,
@@ -1082,12 +1082,12 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
     ax.set_ylim(min_value, max_value)
     ax.plot([min_value, max_value], [min_value, max_value], "r-")
 
-    MAE = np.sum(np.abs(DFT_values - MLP_values)) / len(DFT_values) if len(DFT_values) != 0 else 0
+    MAE = np.sum(np.abs(DFT_values - MLIP_values)) / len(DFT_values) if len(DFT_values) != 0 else 0
 
     ax.text(
         x=0.05,
         y=0.95,
-        s=f"MAE-{MLP_name}: {MAE:.2f}",
+        s=f"MAE-{MLIP_name}: {MAE:.2f}",
         transform=plt.gca().transAxes,
         fontsize=30,
         verticalalignment="top",
@@ -1097,7 +1097,7 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
     )
 
     ax.set_xlabel("DFT (eV)", fontsize=40)
-    ax.set_ylabel(f"{MLP_name} (eV)", fontsize=40)
+    ax.set_ylabel(f"{MLIP_name} (eV)", fontsize=40)
     ax.tick_params(axis="both", which="major", labelsize=20)
     ax.grid(True)
 
@@ -1111,7 +1111,7 @@ def plotter_mono(ads_data, MLP_name, tag, min_value, max_value, **kwargs):
     return MAE
 
 
-def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs):
+def plotter_multi(ads_data, MLIP_name, types, tag, min_value, max_value, **kwargs):
     colors = [
         "blue",
         "red",
@@ -1201,7 +1201,7 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
         "v",
         "8",
     ] * 10
-    plot_save_path = os.path.join(os.getcwd(), "plot", MLP_name)
+    plot_save_path = os.path.join(os.getcwd(), "plot", MLIP_name)
     os.makedirs(plot_save_path, exist_ok=True)
     figsize = kwargs.get("figsize", (9, 8))
     mark_size = kwargs.get("mark_size", 100)
@@ -1229,25 +1229,25 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
     scatter_handles = []
 
     # Check if this is a single calculation by looking at data structure
-    is_single_calc = "MLP_min" not in ads_data["all"].get(types[0], {})
+    is_single_calc = "MLIP_min" not in ads_data["all"].get(types[0], {})
 
     for i, adsorbate in enumerate(analysis_adsorbates):
         if "normal" in ads_data["all"]:
             DFT_values = []
-            MLP_values = []
+            MLIP_values = []
             for type in types:
                 DFT_values.append(ads_data[adsorbate][type]["DFT"])
-                MLP_values.append(ads_data[adsorbate][type]["MLP"])
+                MLIP_values.append(ads_data[adsorbate][type]["MLIP"])
         else:
             DFT_values = [ads_data[adsorbate]["all"]["DFT"]]
-            MLP_values = [ads_data[adsorbate]["all"]["MLP"]]
+            MLIP_values = [ads_data[adsorbate]["all"]["MLIP"]]
                 
         DFT_values = np.concatenate(DFT_values)
-        MLP_values = np.concatenate(MLP_values)
+        MLIP_values = np.concatenate(MLIP_values)
 
         scatter = ax.scatter(
             DFT_values,
-            MLP_values,
+            MLIP_values,
             color=colors[i],
             label=f"* {adsorbate}",
             marker=markers[i],
@@ -1257,21 +1257,21 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
         )
         
         if error_bar_display and not is_single_calc:
-            MLP_mins = []
-            MLP_maxs = []
+            MLIP_mins = []
+            MLIP_maxs = []
             
             for type in types:
-                MLP_mins.append(ads_data[adsorbate][type]["MLP_min"])
-                MLP_maxs.append(ads_data[adsorbate][type]["MLP_max"])
+                MLIP_mins.append(ads_data[adsorbate][type]["MLIP_min"])
+                MLIP_maxs.append(ads_data[adsorbate][type]["MLIP_max"])
                 
-            MLP_mins = np.concatenate(MLP_mins)
-            MLP_maxs = np.concatenate(MLP_maxs)
+            MLIP_mins = np.concatenate(MLIP_mins)
+            MLIP_maxs = np.concatenate(MLIP_maxs)
             
-            yerr_minus = MLP_values - MLP_mins
-            yerr_plus = MLP_maxs - MLP_values
+            yerr_minus = MLIP_values - MLIP_mins
+            yerr_plus = MLIP_maxs - MLIP_values
             ax.errorbar(
                 DFT_values,
-                MLP_values,
+                MLIP_values,
                 yerr=[yerr_minus, yerr_plus],
                 fmt='none',
                 ecolor="black",
@@ -1283,11 +1283,11 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
         scatter_handles.append(scatter)
 
         MAEs[adsorbate] = (
-            np.sum(np.abs(DFT_values - MLP_values)) / len(DFT_values)
+            np.sum(np.abs(DFT_values - MLIP_values)) / len(DFT_values)
             if len(DFT_values) != 0
             else 0
         )
-        error_sum += np.sum(np.abs(DFT_values - MLP_values))
+        error_sum += np.sum(np.abs(DFT_values - MLIP_values))
         len_total += len(DFT_values)
 
         MAEs[f"len_{adsorbate}"] = len(DFT_values)
@@ -1302,7 +1302,7 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
     ax.text(
         x=0.05,
         y=0.95,
-        s=f"MAE-{MLP_name}: {MAE_total:.2f}",
+        s=f"MAE-{MLIP_name}: {MAE_total:.2f}",
         transform=plt.gca().transAxes,
         fontsize=30,
         verticalalignment="top",
@@ -1312,7 +1312,7 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
     )
 
     ax.set_xlabel("DFT (eV)", fontsize=40)
-    ax.set_ylabel(f"{MLP_name} (eV)", fontsize=40)
+    ax.set_ylabel(f"{MLIP_name} (eV)", fontsize=40)
     ax.tick_params(axis="both", which="major", labelsize=20)
 
     if (
@@ -1345,7 +1345,7 @@ def plotter_multi(ads_data, MLP_name, types, tag, min_value, max_value, **kwargs
     return MAEs
 
 
-def data_to_excel(main_data, anomaly_data, MLPs_data, analysis_adsorbates, **kwargs):
+def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kwargs):
     benchmarking_name = kwargs.get("Benchmarking_name", os.path.basename(os.getcwd()))
 
     df_main = pd.DataFrame(main_data)
@@ -1353,12 +1353,12 @@ def data_to_excel(main_data, anomaly_data, MLPs_data, analysis_adsorbates, **kwa
     output_file = f"{benchmarking_name}_Benchmarking_Analysis.xlsx"
 
     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        df_main.to_excel(writer, sheet_name="MLP_Data", index=False)
+        df_main.to_excel(writer, sheet_name="MLIP_Data", index=False)
 
         df_anomaly = pd.DataFrame(anomaly_data)
         df_anomaly.to_excel(writer, sheet_name="anomaly", index=False)
 
-        for MLP_name, data_dict in MLPs_data.items():
+        for MLIP_name, data_dict in MLIPs_data.items():
             data_tmp = []
             for adsorbate in analysis_adsorbates:
                 if f"len_{adsorbate}" in data_dict["normal"]:
@@ -1381,7 +1381,7 @@ def data_to_excel(main_data, anomaly_data, MLPs_data, analysis_adsorbates, **kwa
                     )
 
             data_df = pd.DataFrame(data_tmp)
-            data_df.to_excel(writer, sheet_name=MLP_name, index=False)
+            data_df.to_excel(writer, sheet_name=MLIP_name, index=False)
 
         # 워크북 및 포맷 정의
         workbook = writer.book
@@ -1449,7 +1449,7 @@ def data_to_excel(main_data, anomaly_data, MLPs_data, analysis_adsorbates, **kwa
             worksheet = writer.sheets[sheet_name]
             df = (
                 df_main
-                if sheet_name == "MLP_Data"
+                if sheet_name == "MLIP_Data"
                 else (
                     df_anomaly
                     if sheet_name == "anomaly"
@@ -1532,17 +1532,17 @@ def get_ads_eng_range(data_dict):
             
     return min(ads_eng_values), max(ads_eng_values)
 
-def analysis_MLPs(**kwargs):
+def analysis_MLIPs(**kwargs):
     main_data = []
     anomaly_data = []
-    MLP_datas = {}
+    MLIP_datas = {}
     adsorbates = set()
     calculating_path = kwargs.get(
         "calculating_path", os.path.join(os.getcwd(), "result")
     )
 
-    MLP_list = kwargs.get(
-        "MLP_list",
+    MLIP_list = kwargs.get(
+        "MLIP_list",
         sorted(
             [
                 name
@@ -1552,31 +1552,31 @@ def analysis_MLPs(**kwargs):
             key=str.lower,
         ),
     )
-    for MLP_name in MLP_list:
-        absolute_energy_MLP = True
+    for MLIP_name in MLIP_list:
+        absolute_energy_MLIP = True
         first_reaction = True
-        print(MLP_name)
-        with open(f"{calculating_path}/{MLP_name}/{MLP_name}_result.json", "r") as f:
-            MLP_result = json.load(f)
+        print(MLIP_name)
+        with open(f"{calculating_path}/{MLIP_name}/{MLIP_name}_result.json", "r") as f:
+            MLIP_result = json.load(f)
 
-        with open(f"{calculating_path}/{MLP_name}/{MLP_name}_anomaly_detection.json", "r") as f:
-            MLP_anomaly = json.load(f)
+        with open(f"{calculating_path}/{MLIP_name}/{MLIP_name}_anomaly_detection.json", "r") as f:
+            MLIP_anomaly = json.load(f)
 
         ads_data = {
             "all": {
-                "normal": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
-                "anomaly": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
+                "normal": {"DFT": np.array([]), "MLIP": np.array([]), "MLIP_min": np.array([]), "MLIP_max": np.array([])},
+                "anomaly": {"DFT": np.array([]), "MLIP": np.array([]), "MLIP_min": np.array([]), "MLIP_max": np.array([])},
             }
         }
 
-        for reaction in MLP_result:
-            adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
+        for reaction in MLIP_result:
+            adsorbate = find_adsorbate(MLIP_result[reaction]["reference"])
             adsorbates.add(adsorbate)
             
             if first_reaction:
                 first_reaction = False
-                if "slab_conv" not in MLP_result[reaction]["anomalies"]:
-                    absolute_energy_MLP = False
+                if "slab_conv" not in MLIP_result[reaction]["anomalies"]:
+                    absolute_energy_MLIP = False
 
         time_accum = 0
         step_accum = 0
@@ -1591,47 +1591,47 @@ def analysis_MLPs(**kwargs):
 
         analysis_adsorbates = kwargs.get("target_adsorbates", adsorbates)
 
-        for reaction in MLP_result:
-            adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
+        for reaction in MLIP_result:
+            adsorbate = find_adsorbate(MLIP_result[reaction]["reference"])
             if adsorbate in analysis_adsorbates:
                 if adsorbate not in ads_data:
                     ads_data[adsorbate] = {
-                        "normal": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
-                        "anomaly": {"DFT": np.array([]), "MLP": np.array([]), "MLP_min": np.array([]), "MLP_max": np.array([])},
+                        "normal": {"DFT": np.array([]), "MLIP": np.array([]), "MLIP_min": np.array([]), "MLIP_max": np.array([])},
+                        "anomaly": {"DFT": np.array([]), "MLIP": np.array([]), "MLIP_min": np.array([]), "MLIP_max": np.array([])},
                     }
 
-                num_anomalies = sum(MLP_result[reaction]["anomalies"].values())
+                num_anomalies = sum(MLIP_result[reaction]["anomalies"].values())
                 
-                MLP_min, MLP_max = get_ads_eng_range(MLP_result[reaction])
+                MLIP_min, MLIP_max = get_ads_eng_range(MLIP_result[reaction])
 
                 # 데이터를 임시 저장할 백업 생성
                 backup = {
                     "normal": {
                         "DFT": ads_data[adsorbate]["normal"]["DFT"].copy(),
-                        "MLP": ads_data[adsorbate]["normal"]["MLP"].copy(),
-                        "MLP_min": ads_data[adsorbate]["normal"]["MLP_min"].copy(),
-                        "MLP_max": ads_data[adsorbate]["normal"]["MLP_max"].copy()
+                        "MLIP": ads_data[adsorbate]["normal"]["MLIP"].copy(),
+                        "MLIP_min": ads_data[adsorbate]["normal"]["MLIP_min"].copy(),
+                        "MLIP_max": ads_data[adsorbate]["normal"]["MLIP_max"].copy()
                     },
                     "anomaly": {
                         "DFT": ads_data[adsorbate]["anomaly"]["DFT"].copy(),
-                        "MLP": ads_data[adsorbate]["anomaly"]["MLP"].copy(),
-                        "MLP_min": ads_data[adsorbate]["anomaly"]["MLP_min"].copy(),
-                        "MLP_max": ads_data[adsorbate]["anomaly"]["MLP_max"].copy()
+                        "MLIP": ads_data[adsorbate]["anomaly"]["MLIP"].copy(),
+                        "MLIP_min": ads_data[adsorbate]["anomaly"]["MLIP_min"].copy(),
+                        "MLIP_max": ads_data[adsorbate]["anomaly"]["MLIP_max"].copy()
                     }
                 }
 
                 backup_all = {
                     "normal": {
                         "DFT": ads_data["all"]["normal"]["DFT"].copy(),
-                        "MLP": ads_data["all"]["normal"]["MLP"].copy(),
-                        "MLP_min": ads_data["all"]["normal"]["MLP_min"].copy(),
-                        "MLP_max": ads_data["all"]["normal"]["MLP_max"].copy()
+                        "MLIP": ads_data["all"]["normal"]["MLIP"].copy(),
+                        "MLIP_min": ads_data["all"]["normal"]["MLIP_min"].copy(),
+                        "MLIP_max": ads_data["all"]["normal"]["MLIP_max"].copy()
                     },
                     "anomaly": {
                         "DFT": ads_data["all"]["anomaly"]["DFT"].copy(),
-                        "MLP": ads_data["all"]["anomaly"]["MLP"].copy(),
-                        "MLP_min": ads_data["all"]["anomaly"]["MLP_min"].copy(),
-                        "MLP_max": ads_data["all"]["anomaly"]["MLP_max"].copy()
+                        "MLIP": ads_data["all"]["anomaly"]["MLIP"].copy(),
+                        "MLIP_min": ads_data["all"]["anomaly"]["MLIP_min"].copy(),
+                        "MLIP_max": ads_data["all"]["anomaly"]["MLIP_max"].copy()
                     }
                 }
 
@@ -1639,68 +1639,68 @@ def analysis_MLPs(**kwargs):
                     if num_anomalies == 0:
                         ads_data[adsorbate]["normal"]["DFT"] = np.append(
                             ads_data[adsorbate]["normal"]["DFT"],
-                            MLP_result[reaction]["cathub"]["ads_eng"],
+                            MLIP_result[reaction]["reference"]["ads_eng"],
                         )
-                        ads_data[adsorbate]["normal"]["MLP"] = np.append(
-                            ads_data[adsorbate]["normal"]["MLP"],
-                            MLP_result[reaction]["final"]["ads_eng_median"],
+                        ads_data[adsorbate]["normal"]["MLIP"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLIP"],
+                            MLIP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data[adsorbate]["normal"]["MLP_min"] = np.append(
-                            ads_data[adsorbate]["normal"]["MLP_min"],
-                            MLP_min,
+                        ads_data[adsorbate]["normal"]["MLIP_min"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLIP_min"],
+                            MLIP_min,
                         )
-                        ads_data[adsorbate]["normal"]["MLP_max"] = np.append(
-                            ads_data[adsorbate]["normal"]["MLP_max"],
-                            MLP_max,
+                        ads_data[adsorbate]["normal"]["MLIP_max"] = np.append(
+                            ads_data[adsorbate]["normal"]["MLIP_max"],
+                            MLIP_max,
                         )
                         ads_data["all"]["normal"]["DFT"] = np.append(
                             ads_data["all"]["normal"]["DFT"],
-                            MLP_result[reaction]["cathub"]["ads_eng"],
+                            MLIP_result[reaction]["reference"]["ads_eng"],
                         )
-                        ads_data["all"]["normal"]["MLP"] = np.append(
-                            ads_data["all"]["normal"]["MLP"],
-                            MLP_result[reaction]["final"]["ads_eng_median"],
+                        ads_data["all"]["normal"]["MLIP"] = np.append(
+                            ads_data["all"]["normal"]["MLIP"],
+                            MLIP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data["all"]["normal"]["MLP_min"] = np.append(
-                            ads_data["all"]["normal"]["MLP_min"],
-                            MLP_min,
+                        ads_data["all"]["normal"]["MLIP_min"] = np.append(
+                            ads_data["all"]["normal"]["MLIP_min"],
+                            MLIP_min,
                         )
-                        ads_data["all"]["normal"]["MLP_max"] = np.append(
-                            ads_data["all"]["normal"]["MLP_max"],
-                            MLP_max,
+                        ads_data["all"]["normal"]["MLIP_max"] = np.append(
+                            ads_data["all"]["normal"]["MLIP_max"],
+                            MLIP_max,
                         )
                     else:
                         ads_data[adsorbate]["anomaly"]["DFT"] = np.append(
                             ads_data[adsorbate]["anomaly"]["DFT"],
-                            MLP_result[reaction]["cathub"]["ads_eng"],
+                            MLIP_result[reaction]["reference"]["ads_eng"],
                         )
-                        ads_data[adsorbate]["anomaly"]["MLP"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["MLP"],
-                            MLP_result[reaction]["final"]["ads_eng_median"],
+                        ads_data[adsorbate]["anomaly"]["MLIP"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLIP"],
+                            MLIP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data[adsorbate]["anomaly"]["MLP_min"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["MLP_min"],
-                            MLP_min,
+                        ads_data[adsorbate]["anomaly"]["MLIP_min"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLIP_min"],
+                            MLIP_min,
                         )
-                        ads_data[adsorbate]["anomaly"]["MLP_max"] = np.append(
-                            ads_data[adsorbate]["anomaly"]["MLP_max"],
-                            MLP_max,
+                        ads_data[adsorbate]["anomaly"]["MLIP_max"] = np.append(
+                            ads_data[adsorbate]["anomaly"]["MLIP_max"],
+                            MLIP_max,
                         )
                         ads_data["all"]["anomaly"]["DFT"] = np.append(
                             ads_data["all"]["anomaly"]["DFT"],
-                            MLP_result[reaction]["cathub"]["ads_eng"],
+                            MLIP_result[reaction]["reference"]["ads_eng"],
                         )
-                        ads_data["all"]["anomaly"]["MLP"] = np.append(
-                            ads_data["all"]["anomaly"]["MLP"],
-                            MLP_result[reaction]["final"]["ads_eng_median"],
+                        ads_data["all"]["anomaly"]["MLIP"] = np.append(
+                            ads_data["all"]["anomaly"]["MLIP"],
+                            MLIP_result[reaction]["final"]["ads_eng_median"],
                         )
-                        ads_data["all"]["anomaly"]["MLP_min"] = np.append(
-                            ads_data["all"]["anomaly"]["MLP_min"],
-                            MLP_min,
+                        ads_data["all"]["anomaly"]["MLIP_min"] = np.append(
+                            ads_data["all"]["anomaly"]["MLIP_min"],
+                            MLIP_min,
                         )
-                        ads_data["all"]["anomaly"]["MLP_max"] = np.append(
-                            ads_data["all"]["anomaly"]["MLP_max"],
-                            MLP_max,
+                        ads_data["all"]["anomaly"]["MLIP_max"] = np.append(
+                            ads_data["all"]["anomaly"]["MLIP_max"],
+                            MLIP_max,
                         )
                 except Exception as e:
                     # 에러 발생 시 백업 데이터로 복원
@@ -1713,40 +1713,40 @@ def analysis_MLPs(**kwargs):
 
                 time_accum += sum(
                     value
-                    for key, value in MLP_result[reaction]["final"].items()
+                    for key, value in MLIP_result[reaction]["final"].items()
                     if "time_total" in key
                 )
 
-                log_dir_path = f"{calculating_path}/{MLP_name}/log/{reaction}"
+                log_dir_path = f"{calculating_path}/{MLIP_name}/log/{reaction}"
                 txt_files = get_txt_files_in_directory(log_dir_path)
 
                 for txt_file in txt_files:
                     step_tmp = count_lbfgs_steps(txt_file)
                     step_accum += step_tmp
 
-                if absolute_energy_MLP:
-                    if MLP_result[reaction]["anomalies"]["slab_conv"]:
+                if absolute_energy_MLIP:
+                    if MLIP_result[reaction]["anomalies"]["slab_conv"]:
                         slab_conv += 1
 
-                if MLP_result[reaction]["anomalies"]["ads_conv"]:
+                if MLIP_result[reaction]["anomalies"]["ads_conv"]:
                     ads_conv += 1                    
                 
-                if absolute_energy_MLP:
-                    if MLP_result[reaction]["anomalies"]["slab_move"]:
+                if absolute_energy_MLIP:
+                    if MLIP_result[reaction]["anomalies"]["slab_move"]:
                         slab_move += 1
 
-                if MLP_result[reaction]["anomalies"]["ads_move"]:
+                if MLIP_result[reaction]["anomalies"]["ads_move"]:
                         ads_move += 1
 
-                if absolute_energy_MLP:
-                    if MLP_result[reaction]["anomalies"]["slab_seed"]:
+                if absolute_energy_MLIP:
+                    if MLIP_result[reaction]["anomalies"]["slab_seed"]:
                         slab_seed += 1
 
-                if absolute_energy_MLP:
-                    if MLP_result[reaction]["anomalies"]["ads_seed"]:
+                if absolute_energy_MLIP:
+                    if MLIP_result[reaction]["anomalies"]["ads_seed"]:
                         ads_seed += 1
 
-                if MLP_result[reaction]["anomalies"]["ads_eng_seed"]:
+                if MLIP_result[reaction]["anomalies"]["ads_eng_seed"]:
                     ads_eng_seed += 1
 
         DFT_data = np.concatenate(
@@ -1759,7 +1759,7 @@ def analysis_MLPs(**kwargs):
 
         MAE_all = plotter_mono(
             ads_data,
-            MLP_name,
+            MLIP_name,
             "all",
             min_value,
             max_value,
@@ -1767,7 +1767,7 @@ def analysis_MLPs(**kwargs):
         )
         MAE_normal = plotter_mono(
             ads_data,
-            MLP_name,
+            MLIP_name,
             "normal",
             min_value,
             max_value,
@@ -1775,7 +1775,7 @@ def analysis_MLPs(**kwargs):
         )
         MAE_anomaly = plotter_mono(
             ads_data,
-            MLP_name,
+            MLIP_name,
             "anomaly",
             min_value,
             max_value,
@@ -1784,7 +1784,7 @@ def analysis_MLPs(**kwargs):
 
         MAEs_all_multi = plotter_multi(
             ads_data,
-            MLP_name,
+            MLIP_name,
             ["normal", "anomaly"],
             "all",
             min_value,
@@ -1792,13 +1792,13 @@ def analysis_MLPs(**kwargs):
             **kwargs,
         )
         MAEs_normal_multi = plotter_multi(
-            ads_data, MLP_name, ["normal"], "normal", min_value, max_value, **kwargs
+            ads_data, MLIP_name, ["normal"], "normal", min_value, max_value, **kwargs
         )
         MAEs_anomaly_multi = plotter_multi(
-            ads_data, MLP_name, ["anomaly"], "anomaly", min_value, max_value, **kwargs
+            ads_data, MLIP_name, ["anomaly"], "anomaly", min_value, max_value, **kwargs
         )
 
-        MLP_datas[MLP_name] = {
+        MLIP_datas[MLIP_name] = {
             "all": MAEs_all_multi,
             "normal": MAEs_normal_multi,
             "anomaly": MAEs_anomaly_multi,
@@ -1811,7 +1811,7 @@ def analysis_MLPs(**kwargs):
 
         main_data.append(
             {
-                "MLP_name": MLP_name,
+                "MLIP_name": MLIP_name,
                 "Anomaly ratio (%)": anomaly_ratio,
                 "MAE_total (eV)": MAE_all,
                 "MAE_normal (eV)": MAE_normal,
@@ -1819,21 +1819,21 @@ def analysis_MLPs(**kwargs):
                 "Num_total": total_num,
                 "Num_normal": len(ads_data["all"]["normal"]["DFT"]),
                 "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
-                "Time_total (s)": MLP_anomaly["Time"],
+                "Time_total (s)": MLIP_anomaly["Time"],
                 "Time_per_step (s)": time_accum / step_accum,
             }
         )
 
         anomaly_data_dict = {
-            "MLP_name": MLP_name,
+            "MLIP_name": MLIP_name,
             "Num_anomaly": len(ads_data["all"]["anomaly"]["DFT"]),
             "ads_conv": ads_conv,
             "ads_move": ads_move,
             "ads_eng_seed": ads_eng_seed,
         }
 
-        # slab 관련 항목들은 absolute_energy_MLP이 true일 때만 추가
-        if absolute_energy_MLP:
+        # slab 관련 항목들은 absolute_energy_MLIP이 true일 때만 추가
+        if absolute_energy_MLIP:
             anomaly_data_dict.update({
                 "slab_conv": slab_conv,
                 "slab_move": slab_move,
@@ -1844,18 +1844,18 @@ def analysis_MLPs(**kwargs):
         anomaly_data.append(anomaly_data_dict)
 
     data_to_excel(
-        main_data, anomaly_data, MLP_datas, list(analysis_adsorbates), **kwargs
+        main_data, anomaly_data, MLIP_datas, list(analysis_adsorbates), **kwargs
     )
 
 
-def analysis_MLPs_single(**kwargs):
+def analysis_MLIPs_single(**kwargs):
     main_data = []
-    MLP_datas = {}
+    MLIP_datas = {}
     adsorbates = set()
     single_path = kwargs.get("single_path", os.path.join(os.getcwd(), "result_single"))
     if os.path.exists(single_path):
-        MLP_single_list = kwargs.get(
-            "MLP_list",
+        MLIP_single_list = kwargs.get(
+            "MLIP_list",
             sorted(
                 [
                     name
@@ -1866,51 +1866,51 @@ def analysis_MLPs_single(**kwargs):
             ),
         )
 
-        for MLP_name in MLP_single_list:
-            print(MLP_name)
-            with open(f"{single_path}/{MLP_name}/{MLP_name}_result.json", "r") as f:
-                MLP_result = json.load(f)
+        for MLIP_name in MLIP_single_list:
+            print(MLIP_name)
+            with open(f"{single_path}/{MLIP_name}/{MLIP_name}_result.json", "r") as f:
+                MLIP_result = json.load(f)
 
             # 데이터 구조 수정
             ads_data = {
                 "all": {
-                    "all": {"DFT": np.array([]), "MLP": np.array([])}  # 'all' 키를 한 단계 더 추가
+                    "all": {"DFT": np.array([]), "MLIP": np.array([])}  # 'all' 키를 한 단계 더 추가
                 }
             }
 
-            for reaction in MLP_result:
-                adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
+            for reaction in MLIP_result:
+                adsorbate = find_adsorbate(MLIP_result[reaction]["reference"])
                 adsorbates.add(adsorbate)
 
             analysis_adsorbates = kwargs.get("target_adsorbates", adsorbates)
 
-            for reaction in MLP_result:
-                adsorbate = find_adsorbate(MLP_result[reaction]["cathub"])
+            for reaction in MLIP_result:
+                adsorbate = find_adsorbate(MLIP_result[reaction]["reference"])
                 if adsorbate in analysis_adsorbates:
                     if adsorbate not in ads_data:
                         ads_data[adsorbate] = {
-                            "all": {"DFT": np.array([]), "MLP": np.array([])}
+                            "all": {"DFT": np.array([]), "MLIP": np.array([])}
                         }
 
                     ads_data[adsorbate]["all"]["DFT"] = np.append(
                         ads_data[adsorbate]["all"]["DFT"],
-                        MLP_result[reaction]["cathub"]["ads_eng"],
+                        MLIP_result[reaction]["reference"]["ads_eng"],
                     )
-                    ads_data[adsorbate]["all"]["MLP"] = np.append(
-                        ads_data[adsorbate]["all"]["MLP"],
-                        MLP_result[reaction]["SC_calc"]["ads_eng"],
+                    ads_data[adsorbate]["all"]["MLIP"] = np.append(
+                        ads_data[adsorbate]["all"]["MLIP"],
+                        MLIP_result[reaction]["SC_calc"]["ads_eng"],
                     )
                     ads_data["all"]["all"]["DFT"] = np.append(
                         ads_data["all"]["all"]["DFT"],
-                        MLP_result[reaction]["cathub"]["ads_eng"],
+                        MLIP_result[reaction]["reference"]["ads_eng"],
                     )
-                    ads_data["all"]["all"]["MLP"] = np.append(
-                        ads_data["all"]["all"]["MLP"],
-                        MLP_result[reaction]["SC_calc"]["ads_eng"],
+                    ads_data["all"]["all"]["MLIP"] = np.append(
+                        ads_data["all"]["all"]["MLIP"],
+                        MLIP_result[reaction]["SC_calc"]["ads_eng"],
                     )
 
             DFT_data = ads_data["all"]["all"]["DFT"]
-            MLP_data = ads_data["all"]["all"]["MLP"]
+            MLIP_data = ads_data["all"]["all"]["MLIP"]
 
             min_value_DFT, max_value_DFT = min_max(DFT_data)
 
@@ -1918,12 +1918,12 @@ def analysis_MLPs_single(**kwargs):
             max_value = kwargs.get("max", max_value_DFT)
 
             MAE_all = plotter_mono(
-                ads_data, MLP_name, "single", min_value, max_value, **kwargs
+                ads_data, MLIP_name, "single", min_value, max_value, **kwargs
             )
 
             MAEs_all_multi = plotter_multi(
                 ads_data,
-                MLP_name,
+                MLIP_name,
                 ["all"],  # 여기서 'all'을 리스트로 전달
                 "single",
                 min_value,
@@ -1931,24 +1931,24 @@ def analysis_MLPs_single(**kwargs):
                 **kwargs,
             )
 
-            MLP_datas[MLP_name] = MAEs_all_multi
+            MLIP_datas[MLIP_name] = MAEs_all_multi
             total_num = len(DFT_data)
 
             main_data.append(
-                {"MLP_name": MLP_name, "MAE (eV)": MAE_all, "Num_total": total_num}
+                {"MLIP_name": MLIP_name, "MAE (eV)": MAE_all, "Num_total": total_num}
             )
 
-        data_to_excel_single(main_data, MLP_datas, list(analysis_adsorbates), **kwargs)
+        data_to_excel_single(main_data, MLIP_datas, list(analysis_adsorbates), **kwargs)
 
 
 def execute_benchmark_single(calculator, **kwargs):
-    required_keys = ["MLP_name", "benchmark"]
+    required_keys = ["MLIP_name", "benchmark"]
 
     for key in required_keys:
         if key not in kwargs:
             raise ValueError(f"Missing required keyword argument: {key}")
 
-    MLP_name = kwargs["MLP_name"]
+    MLIP_name = kwargs["MLIP_name"]
     benchmark = kwargs["benchmark"]
     gas_distance = kwargs.get("gas_distance", 10)
     optimizer = kwargs.get("optimizer", "LBFGS")
@@ -1956,10 +1956,10 @@ def execute_benchmark_single(calculator, **kwargs):
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
     with open(path_pkl, "rb") as file:
-        cathub_data = pickle.load(file)
+        ref_data = pickle.load(file)
 
-    save_directory = os.path.join(os.getcwd(), "result_single", MLP_name)
-    print(f"Starting {MLP_name} Benchmarking")
+    save_directory = os.path.join(os.getcwd(), "result_single", MLIP_name)
+    print(f"Starting {MLIP_name} Benchmarking")
     # Basic Settings==============================================================================
     os.makedirs(f"{save_directory}/structures", exist_ok=True)
     os.makedirs(f"{save_directory}/gases", exist_ok=True)
@@ -1971,15 +1971,15 @@ def execute_benchmark_single(calculator, **kwargs):
     gas_energies = {}
 
     print("Starting calculations...")
-    for index, key in enumerate(cathub_data):
+    for index, key in enumerate(ref_data):
         try:
-            print(f"[{index+1}/{len(cathub_data)}] {key}")
+            print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
-            final_result[key]["cathub"] = {}
-            final_result[key]["cathub"]["ads_eng"] = cathub_data[key]["cathub_energy"]
-            for structure in cathub_data[key]["raw"]:
+            final_result[key]["reference"] = {}
+            final_result[key]["reference"]["ads_eng"] = ref_data[key]["ref_eds_eng"]
+            for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    final_result[key]["cathub"][f"{structure}_abs"] = cathub_data[key]["raw"][structure]["energy_cathub"]
+                    final_result[key]["reference"][f"{structure}_abs"] = ref_data[key]["raw"][structure]["energy_ref"]
                     
             structure_path = f"{save_directory}/structures/{key}"
             os.makedirs(structure_path, exist_ok=True)
@@ -1987,13 +1987,13 @@ def execute_benchmark_single(calculator, **kwargs):
             informs["ads_eng"] = []
 
             ads_energy_calc = 0
-            for structure in cathub_data[key]["raw"]:
+            for structure in ref_data[key]["raw"]:
                 if "gas" not in str(structure):
-                    POSCAR_str = cathub_data[key]["raw"][structure]["atoms"]
+                    POSCAR_str = ref_data[key]["raw"][structure]["atoms"]
                     write(f"{structure_path}/CONTCAR_{structure}", POSCAR_str)
                     energy_calculated = energy_cal_single(calculator, POSCAR_str)
                     ads_energy_calc += (
-                        energy_calculated * cathub_data[key]["raw"][structure]["stoi"]
+                        energy_calculated * ref_data[key]["raw"][structure]["stoi"]
                     )
                     if structure == "star":
                         slab_energy = energy_calculated
@@ -2004,13 +2004,13 @@ def execute_benchmark_single(calculator, **kwargs):
                     if structure in gas_energies:
                         ads_energy_calc += (
                             gas_energies[structure]
-                            * cathub_data[key]["raw"][structure]["stoi"]
+                            * ref_data[key]["raw"][structure]["stoi"]
                         )
                     else:
                         print(f"{structure} calculating")
                         gas_CONTCAR, gas_energy = energy_cal_gas(
                             calculator,
-                            cathub_data[key]["raw"][structure]["atoms"],
+                            ref_data[key]["raw"][structure]["atoms"],
                             0.05,
                             f"{save_directory}/gases/POSCAR_{structure}",
                             gas_distance,
@@ -2020,7 +2020,7 @@ def execute_benchmark_single(calculator, **kwargs):
                         )
                         gas_energies[structure] = gas_energy
                         ads_energy_calc += (
-                            gas_energy * cathub_data[key]["raw"][structure]["stoi"]
+                            gas_energy * ref_data[key]["raw"][structure]["stoi"]
                         )
                         write(f"{save_directory}/gases/CONTCAR_{structure}", gas_CONTCAR)
 
@@ -2030,10 +2030,10 @@ def execute_benchmark_single(calculator, **kwargs):
                 "ads_abs": ads_energy,
             }
 
-            with open(f"{save_directory}/{MLP_name}_result.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "w") as file:
                 json.dump(final_result, file, indent=4)
 
-            with open(f"{save_directory}/{MLP_name}_gases.json", "w") as file:
+            with open(f"{save_directory}/{MLIP_name}_gases.json", "w") as file:
                 json.dump(gas_energies, file, indent=4)
 
         except Exception as e:
@@ -2041,10 +2041,10 @@ def execute_benchmark_single(calculator, **kwargs):
             print("Skipping to next reaction...")
             continue
 
-    print(f"{MLP_name} Benchmarking Finish")
+    print(f"{MLIP_name} Benchmarking Finish")
 
 
-def data_to_excel_single(main_data, MLPs_data, analysis_adsorbates, **kwargs):
+def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
     benchmarking_name = kwargs.get("Benchmarking_name", os.path.basename(os.getcwd()))
 
     df_main = pd.DataFrame(main_data)
@@ -2052,9 +2052,9 @@ def data_to_excel_single(main_data, MLPs_data, analysis_adsorbates, **kwargs):
     output_file = f"{benchmarking_name}_Single_Benchmarking_Analysis.xlsx"
 
     with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        df_main.to_excel(writer, sheet_name="MLP_Data", index=False)
+        df_main.to_excel(writer, sheet_name="MLIP_Data", index=False)
 
-        for MLP_name, data_dict in MLPs_data.items():
+        for MLIP_name, data_dict in MLIPs_data.items():
             data_tmp = []
             for adsorbate in analysis_adsorbates:
                 if f"len_{adsorbate}" in data_dict:
@@ -2067,7 +2067,7 @@ def data_to_excel_single(main_data, MLPs_data, analysis_adsorbates, **kwargs):
                     )
 
             data_df = pd.DataFrame(data_tmp)
-            data_df.to_excel(writer, sheet_name=MLP_name, index=False)
+            data_df.to_excel(writer, sheet_name=MLIP_name, index=False)
 
         # 워크북 및 포맷 정의
         workbook = writer.book
@@ -2111,7 +2111,7 @@ def data_to_excel_single(main_data, MLPs_data, analysis_adsorbates, **kwargs):
         for sheet_name in writer.sheets:
             worksheet = writer.sheets[sheet_name]
             df = (
-                df_main if sheet_name == "MLP_Data" 
+                df_main if sheet_name == "MLIP_Data" 
                 else pd.DataFrame(data_tmp)
             )
 

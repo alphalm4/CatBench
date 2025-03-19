@@ -9,7 +9,7 @@ pip install catbench
 
 ## Overview
 ![CatBench Schematic](assets/CatBench_Schematic.png)
-CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Potentials (MLPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
+CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Potentials (MLIPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
 
 ## Usage Workflow
 
@@ -156,7 +156,7 @@ catbench.userdata_preprocess("data")
 #### A. General Benchmark
 This is a general benchmark setup. The `range()` value determines the number of repetitions for reproducibility testing. If reproducibility testing is not needed, it can be set to 1.
 
-Note: This benchmark is only compatible with MLP models that output total system energy. For example, OC20 MLP models that are trained to directly predict adsorption energies cannot be used with this framework.
+Note: This benchmark is only compatible with MLIP models that output total system energy. For example, OC20 MLIP models that are trained to directly predict adsorption energies cannot be used with this framework.
 
 ```python
 import catbench
@@ -174,17 +174,17 @@ catbench.execute_benchmark(calculators, **config)
 After execution, the following files and directories will be created:
 
 1. A `result` directory is created to store all calculation outputs.
-2. Inside the `result` directory, subdirectories are created for each MLP.
-3. Each MLP's subdirectory contains:
+2. Inside the `result` directory, subdirectories are created for each MLIP.
+3. Each MLIP's subdirectory contains:
    - `gases/`: Gas reference molecules for adsorption energy calculations
    - `log/`: Slab and adslab calculation logs
    - `traj/`: Slab and adslab trajectory files
-   - `{MLP_name}_gases.json`: Gas molecules energies
-   - `{MLP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
-   - `{MLP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
+   - `{MLIP_name}_gases.json`: Gas molecules energies
+   - `{MLIP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+   - `{MLIP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
-#### B. OC20 MLP Benchmark
-Since OC20 project MLP models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
+#### B. OC20 MLIP Benchmark
+Since OC20 project MLIP models are trained to predict adsorption energies directly rather than total energies, they are handled with a separate function.
 
 ```python
 import catbench
@@ -199,12 +199,12 @@ config = {}
 catbench.execute_benchmark_OC20(calculators, **config)
 ```
 
-The overall usage is similar to the general benchmark, but each MLP will only have the following subdirectories:
+The overall usage is similar to the general benchmark, but each MLIP will only have the following subdirectories:
 
 - `log/`: Slab and adslab calculation logs
 - `traj/`: Slab and adslab trajectory files
-- `{MLP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
-- `{MLP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
+- `{MLIP_name}_anomaly_detection.json`: Anomaly detection status for each adsorption data
+- `{MLIP_name}_result.json`: Raw data (energies, calculation times, anomaly detection, slab displacements, etc.)
 
 #### C. Single-point Calculation Benchmark
 
@@ -224,18 +224,18 @@ catbench.execute_benchmark_single(calculator, **config)
 import catbench
 
 config = {}
-catbench.analysis_MLPs(**config)
+catbench.analysis_MLIPs(**config)
 ```
 
 The analysis function processes the calculation data stored in the `result` directory and generates:
 
 1. A `plot/` directory:
-   - Parity plots for each MLP model
+   - Parity plots for each MLIP model
    - Combined parity plots for comparison
    - Performance visualization plots
 
 2. An Excel file `{dataset_name}_Benchmarking_Analysis.xlsx`:
-   - Comprehensive performance metrics for all MLP models
+   - Comprehensive performance metrics for all MLIP models
    - Statistical analysis of predictions
    - Model-specific details and parameters
 
@@ -245,28 +245,28 @@ The analysis function processes the calculation data stored in the `result` dire
 import catbench
 
 config = {}
-catbench.analysis_MLPs_single(**config)
+catbench.analysis_MLIPs_single(**config)
 ```
 
 ## Outputs
 
 ### 1. Adsorption Energy Parity Plot (mono_version & multi_version)
-You can plot adsorption energy parity plots for each adsorbate across all MLPs, either simply or by adsorbate.
+You can plot adsorption energy parity plots for each adsorbate across all MLIPs, either simply or by adsorbate.
 <p float="left">
   <img src="assets/mono_plot.png" width="400" />
   <img src="assets/multi_plot.png" width="400" />
 </p>
 
 ### 2. Comprehensive Performance Table
-View various metrics for all MLPs.
+View various metrics for all MLIPs.
 ![Comparison Table](assets/comparison_table.png)
 
 ### 3. Anomaly Analysis
-See how anomalies are detected for all MLPs.
+See how anomalies are detected for all MLIPs.
 ![Comparison Table](assets/anomaly_table.png)
 
 ### 4. Analysis by Adsorbate
-Observe how each MLP predicts for each adsorbate.
+Observe how each MLIP predicts for each adsorbate.
 ![Comparison Table](assets/adsorbate_comp_table.png)
 
 ## Configuration Options
@@ -274,7 +274,7 @@ Observe how each MLP predicts for each adsorbate.
 ### execute_benchmark / execute_benchmark_OC20
 | Option | Description | Default |
 |--------|-------------|---------|
-| MLP_name | Name of your MLP | Required |
+| MLIP_name | Name of your MLIP | Required |
 | benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
 | F_CRIT_RELAX | Force convergence criterion | 0.05 |
 | N_CRIT_RELAX | Maximum number of steps | 999 |
@@ -289,17 +289,17 @@ Observe how each MLP predicts for each adsorbate.
 ### execute_benchmark_single
 | Option | Description | Default |
 |--------|-------------|---------|
-| MLP_name | Name of your MLP | Required |
+| MLIP_name | Name of your MLIP | Required |
 | benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
 | gas_distance | Cell size for gas molecules | 10 |
 | optimizer | Optimization algorithm for gas molecule relaxation | "LBFGS" |
 
-### analysis_MLPs
+### analysis_MLIPs
 | Option | Description | Default |
 |--------|-------------|---------|
 | Benchmarking_name | Name for output files | Current directory name |
 | calculating_path | Path to result directory | "./result" |
-| MLP_list | List of MLPs to analyze | All MLPs in result directory |
+| MLIP_list | List of MLIPs to analyze | All MLIPs in result directory |
 | target_adsorbates | Target adsorbates to analyze | All adsorbates |
 | specific_color | Color for plots | "black" |
 | min | Axis minimum | Auto-calculated |

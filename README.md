@@ -39,6 +39,29 @@ catbench.cathub_preprocess("AraComputational2022")
 catbench.cathub_preprocess(["AraComputational2022", "AlonsoStrain2023"])
 ```
 
+When combining multiple benchmarks, the same adsorbate species might be recognized differently due to variations in naming conventions across different datasets (e.g., *HO vs *OH for hydroxyl group). To address this issue, you can use the `adsorbate_integration` parameter to unify these different naming conventions. If no integration is needed, you can simply use the benchmark_name parameter alone:
+
+```python
+# When no integration is needed, just use benchmark_name
+catbench.cathub_preprocess(["Catalysis-Hub_Dataset_tag1", "Catalysis-Hub_Dataset_tag2"])
+
+# When integration is needed
+catbench.cathub_preprocess(
+    ["Catalysis-Hub_Dataset_tag1", "Catalysis-Hub_Dataset_tag2"],
+    adsorbate_integration={'HO': 'OH'}
+)
+
+# You can add multiple integration pairs
+catbench.cathub_preprocess(
+    ["Catalysis-Hub_Dataset_tag1", "Catalysis-Hub_Dataset_tag2"],
+    adsorbate_integration={
+        'HO': 'OH',
+        'CO2': 'OCO',
+        'COOH': 'HOCO'
+    }
+)
+```
+
 #### B. User Dataset
 For custom datasets, prepare your data structure as follows:
 

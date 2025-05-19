@@ -1,5 +1,5 @@
 # CatBench
-CatBench: Benchmark Framework for Machine Learning Interatomic Potentials in Adsorption Energy Predictions
+CatBench: Benchmark Framework of Machine Learning Interatomic Potentials in Adsorption Energy Predictions
 
 ## Installation
 
@@ -9,12 +9,14 @@ pip install catbench
 
 ## Overview
 ![CatBench Schematic](assets/CatBench_Schematic.png)
-CatBench is a comprehensive benchmarking framework designed to evaluate Machine Learning Interatomic Potentials (MLIPs) for adsorption energy predictions. It provides tools for data processing, model evaluation, and result analysis.
+CatBench is a comprehensive benchmark framework designed to evaluate Machine Learning Interatomic Potentials (MLIPs) for adsorption energy or other reaction energy predictions. It provides tools for data processing, model evaluation, and result analysis.
 
 ## Usage Workflow
 
 ### 1. Data Processing
 CatBench supports two types of data sources:
+- A. Direct from Catalysis-Hub
+- B. User-caculated VASP Dataset
 
 #### A. Direct from Catalysis-Hub
 
@@ -62,69 +64,84 @@ catbench.cathub_preprocess(
 )
 ```
 
-#### B. User Dataset
-For custom datasets, prepare your data structure as follows:
+#### B. User-caculated VASP Dataset
+For CatBench simulation on your VASP datasets, prepare your data hierarchy as follows:
 
 The data structure should include:
 - Gas references (`gas/`) containing VASP output files for gas phase molecules
   - Note: Gas molecule folders must end with 'gas' (e.g., `H2gas/`, `H2Ogas/`)
-- Surface structures (`surface1/`, `surface2/`, etc.) containing:
+- Surface systems (`system1/`, `system2/`, etc.) containing:
+  - Each system represents a collection of reaction energies based on the same slab (e.g., `system1/` for Pt111, `system2/` for Ni111)
   - Clean slab calculations (`slab/`)
-  - Adsorbate-surface systems (`H/`, `OH/`, etc.)
+  - Adsorbate-surface systems organized by adsorbate type (`H/`, `OH/`, etc.)
+    - Under each adsorbate directory, you can create subdirectories with any names to represent different configurations
+    - Each configuration directory should contain the VASP output files
 
 Important Notes:
-1. Each directory must contain CONTCAR and OSZICAR files. Other VASP output files can be present as well.
+1. Each directory must contain CONTCAR and OSZICAR files. Note that other VASP output files will be deleted during processing, so please ensure your original files are preserved.
 2. When using `process_output` function, it will automatically clean up (delete) all files except CONTCAR and OSZICAR. Therefore, it is strongly recommended to:
    - Keep your original data folder untouched
    - Create a copy of your data folder
    - Run `process_output` on the copied folder
-3. When benchmarking on user dataset, you must set `rate=0` in `execute_benchmark` to preserve the original atomic constraints from your calculations.
+3. When benchmarking on user dataset, you must set `rate=0` in `execute_benchmark` function to preserve the original atomic constraints from your calculations.
 
 ```
 data/
 ├── gas/
 │   ├── H2gas/
 │   │   ├── CONTCAR
-│   │   └── OSZICAR
+│   │   ├── OSZICAR
+│   │   └── ...
 │   └── H2Ogas/
 │       ├── CONTCAR
-│       └── OSZICAR
-├── surface1/
+│       ├── OSZICAR
+│       └── ...
+├── system1/ (e.g., Pt111/)
 │   ├── slab/
 │   │   ├── CONTCAR
-│   │   └── OSZICAR
+│   │   ├── OSZICAR
+│   │   └── ...
 │   ├── H/
 │   │   ├── 1/
 │   │   │   ├── CONTCAR
-│   │   │   └── OSZICAR
+│   │   │   ├── OSZICAR
+│   │   │   └── ...
 │   │   └── 2/
 │   │       ├── CONTCAR
-│   │       └── OSZICAR
+│   │       ├── OSZICAR
+│   │       └── ...
 │   └── OH/
 │       ├── 1/
 │       │   ├── CONTCAR
-│       │   └── OSZICAR
+│       │   ├── OSZICAR
+│   │   └── ...
 │       └── 2/
 │           ├── CONTCAR
-│           └── OSZICAR
-└── surface2/
+│           ├── OSZICAR
+│           └── ...
+└── system2/ (e.g., Ni111/)
     ├── slab/
     │   ├── CONTCAR
-    │   └── OSZICAR
+    │   ├── OSZICAR
+    │   └── ...
     ├── H/
     │   ├── 1/
     │   │   ├── CONTCAR
-    │   │   └── OSZICAR
+    │   │   ├── OSZICAR
+    │   │   └── ...
     │   └── 2/
     │       ├── CONTCAR
-    │       └── OSZICAR
+    │       ├── OSZICAR
+    │       └── ...
     └── OH/
         ├── 1/
         │   ├── CONTCAR
-        │   └── OSZICAR
+        │   ├── OSZICAR
+        │   └── ...
         └── 2/
             ├── CONTCAR
-            └── OSZICAR
+            ├── OSZICAR
+            └── ...
 ```
 
 Then process using:
@@ -152,6 +169,22 @@ coeff_setting = {
         "H2Ogas": -1,    # Coefficient for H2O gas reference
     },
 }
+```
+
+The coefficient setting allows flexible definition of reaction energies, enabling benchmarking of various types of reactions beyond adsorption.
+
+For example, you can benchmark the prediction capability for oxygen vacancy formation energy as follows:
+
+```python
+# Example: Oxygen vacancy formation energy calculation
+coeff_setting = {
+    "Ov": {
+        "slab": -1,        # Coefficient for clean surface
+        "adslab": 1,       # Coefficient for slab with oxygen vacancy
+        "O2gas": 1/2,      # Coefficient for O2 gas reference (vacancy formation)
+    }
+}
+
 
 # This will clean up directories and keep only CONTCAR and OSZICAR files
 catbench.process_output("data", coeff_setting)
@@ -167,14 +200,26 @@ Note: This benchmark is only compatible with MLIP models that output total syste
 
 ```python
 import catbench
-from your_calculator import Calculator
+from your_calculator import your_MLIP_Calculator
 
 # Prepare calculator list
-# range(5): Run 5 times for reproducibility testing
-# range(1): Single run when reproducibility testing is not needed
-calculators = [Calculator() for _ in range(5)]
 
-config = {}
+calc_num = 5 # Number of calculations for reproducibility testing. Can be adjusted based on available computational resources.
+
+calculators = []
+print("Calculators Initializing...")
+for i in range(calc_num):
+    print(f"{i}th calculator")
+    calc = your_MLIP_Calculator(...)
+    calculators.append(calc)
+
+config = {
+    "MLIP_name": "your MLIP name", # Required: Name of your MLIP model (e.g., "MACE", "CHGNet", "UMA", "yourmodel_w_dataset1", "yourmodel_tuned_1"). You can use any abbreviation that identifies your model.
+    "benchmark": "your benchmark dataset pkl name", # Required: Name of the .pkl file in the raw_data directory
+    "rate": 0.5, # Optional: For cathub data, can be any value. For user VASP data, must be set to 0
+    ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
+}
+
 catbench.execute_benchmark(calculators, **config)
 ```
 
@@ -195,14 +240,26 @@ Since OC20 project MLIP models are trained to predict adsorption energies direct
 
 ```python
 import catbench
-from your_calculator import Calculator
+from your_calculator import your_MLIP_Calculator
 
 # Prepare calculator list
-# range(5): Run 5 times for reproducibility testing
-# range(1): Single run when reproducibility testing is not needed
-calculators = [Calculator() for _ in range(5)]
 
-config = {}
+calc_num = 5 # Number of calculations for reproducibility testing. Can be adjusted based on available computational resources.
+
+calculators = []
+print("Calculators Initializing...")
+for i in range(calc_num):
+    print(f"{i}th calculator")
+    calc = your_MLIP_Calculator(...)
+    calculators.append(calc)
+
+config = {
+    "MLIP_name": "your MLIP name", # Required: Name of your MLIP model (e.g., "MACE", "CHGNet", "UMA", "yourmodel_w_dataset1", "yourmodel_tuned_1"). You can use any abbreviation that identifies your model.
+    "benchmark": "your benchmark dataset pkl name", # Required: Name of the .pkl file in the raw_data directory
+    "rate": 0.5, # Optional: For cathub data, can be any value. For user VASP data, must be set to 0
+    ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
+}
+
 catbench.execute_benchmark_OC20(calculators, **config)
 ```
 
@@ -217,11 +274,24 @@ The overall usage is similar to the general benchmark, but each MLIP will only h
 
 ```python
 import catbench
-from your_calculator import Calculator
+from your_calculator import your_MLIP_Calculator
 
-calculator = Calculator()
+# Prepare calculator list
 
-config = {}
+calc_num = 5 # Number of calculations for reproducibility testing. Can be adjusted based on available computational resources.
+
+calculators = []
+print("Calculators Initializing...")
+for i in range(calc_num):
+    print(f"{i}th calculator")
+    calc = your_MLIP_Calculator(...)
+    calculators.append(calc)
+
+config = {
+    "MLIP_name": "your MLIP name", # Required: Name of your MLIP model (e.g., "MACE", "CHGNet", "UMA", "yourmodel_w_dataset1", "yourmodel_tuned_1"). You can use any abbreviation that identifies your model.
+    "benchmark": "your benchmark dataset pkl name", # Required: Name of the .pkl file in the raw_data directory
+    ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
+}
 catbench.execute_benchmark_single(calculator, **config)
 ```
 
@@ -230,7 +300,9 @@ catbench.execute_benchmark_single(calculator, **config)
 ```python
 import catbench
 
-config = {}
+config = {
+    ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
+}
 catbench.analysis_MLIPs(**config)
 ```
 
@@ -241,7 +313,7 @@ The analysis function processes the calculation data stored in the `result` dire
    - Combined parity plots for comparison
    - Performance visualization plots
 
-2. An Excel file `{dataset_name}_Benchmarking_Analysis.xlsx`:
+2. An Excel file `{directory_name}_Benchmarking_Analysis.xlsx`:
    - Comprehensive performance metrics for all MLIP models
    - Statistical analysis of predictions
    - Model-specific details and parameters
@@ -251,7 +323,9 @@ The analysis function processes the calculation data stored in the `result` dire
 ```python
 import catbench
 
-config = {}
+config = {
+    ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
+}
 catbench.analysis_MLIPs_single(**config)
 ```
 
@@ -290,7 +364,7 @@ Observe how each MLIP predicts for each adsorbate.
 | disp_thrs_ads | Displacement threshold for adsorbate | 1.5 |
 | again_seed | Seed variation threshold | 0.2 |
 | damping | Damping factor for optimization | 1.0 |
-| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length) | False |
+| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length (Å)) | False |
 | optimizer | Optimization algorithm | "LBFGS" |
 
 ### execute_benchmark_single
@@ -298,7 +372,7 @@ Observe how each MLIP predicts for each adsorbate.
 |--------|-------------|---------|
 | MLIP_name | Name of your MLIP | Required |
 | benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
-| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length) | False |
+| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length (Å)) | False |
 | optimizer | Optimization algorithm for gas molecule relaxation | "LBFGS" |
 
 ### analysis_MLIPs

@@ -6,7 +6,7 @@ setup(
     author="JinukMoon",
     author_email="jumoon@snu.ac.kr",
     packages=find_packages(),
-    description="CatBench: Benchmark of Machine Learning Interatomic Potentials for Adsorption Energy Predictions in Heterogeneous Catalysis",
+    description="CatBench: Benchmark Framework of Machine Learning Interatomic Potentials for Adsorption Energy Predictions in Heterogeneous Catalysis",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/JinukMoon/catbench",
@@ -14,13 +14,12 @@ setup(
     install_requires=[
         "ase>=3.22.1",
         "xlsxwriter>=3.2.0",
-        "numpy==1.26",
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
-    keywords="MLIP benchmarking for catalysis",
+    keywords="MLIP benchmark for catalysis",
     python_requires=">=3.8",
 )

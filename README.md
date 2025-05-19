@@ -16,7 +16,7 @@ CatBench is a comprehensive benchmark framework designed to evaluate Machine Lea
 ### 1. Data Processing
 CatBench supports two types of data sources:
 - A. Direct from Catalysis-Hub
-- B. User-caculated VASP Dataset
+- B. User-calculated VASP Dataset
 
 #### A. Direct from Catalysis-Hub
 
@@ -64,7 +64,7 @@ catbench.cathub_preprocess(
 )
 ```
 
-#### B. User-caculated VASP Dataset
+#### B. User-calculated VASP Dataset
 For CatBench simulation on your VASP datasets, prepare your data hierarchy as follows:
 
 The data structure should include:
@@ -169,11 +169,15 @@ coeff_setting = {
         "H2Ogas": -1,    # Coefficient for H2O gas reference
     },
 }
+
+# This will clean up directories and keep only CONTCAR and OSZICAR files
+catbench.process_output("data", coeff_setting)
+catbench.userdata_preprocess("data")
 ```
 
 The coefficient setting allows flexible definition of reaction energies, enabling benchmarking of various types of reactions beyond adsorption.
 
-For example, you can benchmark the prediction capability for oxygen vacancy formation energy as follows:
+For example, you can benchmark the prediction performance for oxygen vacancy formation energy as follows:
 
 ```python
 # Example: Oxygen vacancy formation energy calculation
@@ -184,7 +188,6 @@ coeff_setting = {
         "O2gas": 1/2,      # Coefficient for O2 gas reference (vacancy formation)
     }
 }
-
 
 # This will clean up directories and keep only CONTCAR and OSZICAR files
 catbench.process_output("data", coeff_setting)

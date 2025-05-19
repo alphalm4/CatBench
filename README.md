@@ -67,11 +67,18 @@ For custom datasets, prepare your data structure as follows:
 
 The data structure should include:
 - Gas references (`gas/`) containing VASP output files for gas phase molecules
+  - Note: Gas molecule folders must end with 'gas' (e.g., `H2gas/`, `H2Ogas/`)
 - Surface structures (`surface1/`, `surface2/`, etc.) containing:
   - Clean slab calculations (`slab/`)
   - Adsorbate-surface systems (`H/`, `OH/`, etc.)
 
-Note: Each directory must contain CONTCAR and OSZICAR files. Other VASP output files can be present as well - the `process_output` function will automatically clean up (delete) all files except CONTCAR and OSZICAR.
+Important Notes:
+1. Each directory must contain CONTCAR and OSZICAR files. Other VASP output files can be present as well.
+2. When using `process_output` function, it will automatically clean up (delete) all files except CONTCAR and OSZICAR. Therefore, it is strongly recommended to:
+   - Keep your original data folder untouched
+   - Create a copy of your data folder
+   - Run `process_output` on the copied folder
+3. When benchmarking on user dataset, you must set `rate=0` in `execute_benchmark` to preserve the original atomic constraints from your calculations.
 
 ```
 data/
@@ -283,7 +290,7 @@ Observe how each MLIP predicts for each adsorbate.
 | disp_thrs_ads | Displacement threshold for adsorbate | 1.5 |
 | again_seed | Seed variation threshold | 0.2 |
 | damping | Damping factor for optimization | 1.0 |
-| gas_distance | Cell size for gas molecules | 10 |
+| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length) | False |
 | optimizer | Optimization algorithm | "LBFGS" |
 
 ### execute_benchmark_single
@@ -291,7 +298,7 @@ Observe how each MLIP predicts for each adsorbate.
 |--------|-------------|---------|
 | MLIP_name | Name of your MLIP | Required |
 | benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
-| gas_distance | Cell size for gas molecules | 10 |
+| gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length) | False |
 | optimizer | Optimization algorithm for gas molecule relaxation | "LBFGS" |
 
 ### analysis_MLIPs

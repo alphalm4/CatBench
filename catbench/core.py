@@ -25,6 +25,16 @@ def convert_trajectory(filename):
     images = read(filename, index=":")
     os.remove(filename)
     write(filename, images, format="extxyz")
+    
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 def energy_cal_gas(
@@ -63,9 +73,10 @@ def energy_cal_gas(
         atoms.set_tags(tags)
         while True:
             try:
-                cell_size = [gas_distance, gas_distance, gas_distance]
-                atoms.set_cell(cell_size)
-                atoms.center()
+                if gas_distance:
+                    cell_size = [gas_distance, gas_distance, gas_distance]
+                    atoms.set_cell(cell_size)
+                    atoms.center()
 
                 write(save_path, atoms)
 
@@ -361,7 +372,7 @@ def execute_benchmark(calculators, **kwargs):
     disp_thrs_ads = kwargs.get("disp_thrs_ads", 1.5)
     again_seed = kwargs.get("again_seed", 0.2)
     damping = kwargs.get("damping", 1.0)
-    gas_distance = kwargs.get("gas_distance", 10)
+    gas_distance = kwargs.get("gas_distance", False)
     optimizer = kwargs.get("optimizer", "LBFGS")
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
@@ -568,13 +579,13 @@ def execute_benchmark(calculators, **kwargs):
                 final_anomaly["anomaly"].append(key)
 
             with open(f"{save_directory}/{MLIP_name}_result.json", "w") as file:
-                json.dump(final_result, file, indent=4)
+                json.dump(final_result, file, indent=4, cls=NumpyEncoder)
 
             with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "w") as file:
-                json.dump(final_anomaly, file, indent=4)
+                json.dump(final_anomaly, file, indent=4, cls=NumpyEncoder)
 
             with open(f"{save_directory}/{MLIP_name}_gases.json", "w") as file:
-                json.dump(gas_energies, file, indent=4)
+                json.dump(gas_energies, file, indent=4, cls=NumpyEncoder)
 
         except Exception as e:
             print(f"Error occurred while processing {key}: {str(e)}")
@@ -1950,7 +1961,7 @@ def execute_benchmark_single(calculator, **kwargs):
 
     MLIP_name = kwargs["MLIP_name"]
     benchmark = kwargs["benchmark"]
-    gas_distance = kwargs.get("gas_distance", 10)
+    gas_distance = kwargs.get("gas_distance", False)
     optimizer = kwargs.get("optimizer", "LBFGS")
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")

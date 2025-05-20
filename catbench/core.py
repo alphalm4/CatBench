@@ -374,6 +374,7 @@ def execute_benchmark(calculators, **kwargs):
     damping = kwargs.get("damping", 1.0)
     gas_distance = kwargs.get("gas_distance", False)
     optimizer = kwargs.get("optimizer", "LBFGS")
+    restart = kwargs.get("restart", False)
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
@@ -391,20 +392,39 @@ def execute_benchmark(calculators, **kwargs):
     os.makedirs(f"{save_directory}/gases/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/gases/log", exist_ok=True)
 
-    final_result = {}
-
-    final_anomaly = {}
-    final_anomaly["Time"] = []
-    final_anomaly["normal"] = []
-    final_anomaly["anomaly"] = []
+    # restart가 True일 때 기존 파일들 불러오기
+    if restart:
+        try:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
+                final_result = json.load(file)
+            with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "r") as file:
+                final_anomaly = json.load(file)
+            with open(f"{save_directory}/{MLIP_name}_gases.json", "r") as file:
+                gas_energies = json.load(file)
+            # accum_time도 복원
+            accum_time = final_anomaly["Time"]
+            print("Successfully loaded previous calculation results")
+        except FileNotFoundError:
+            print("No previous calculation results found. Starting new calculation.")
+            final_result = {}
+            final_anomaly = {"Time": [], "normal": [], "anomaly": []}
+            gas_energies = {}
+            accum_time = 0
+    else:
+        final_result = {}
+        final_anomaly = {"Time": [], "normal": [], "anomaly": []}
+        gas_energies = {}
+        accum_time = 0
 
     # Calculation Part==============================================================================
 
-    accum_time = 0
-    gas_energies = {}
-
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
+        # restart가 True이고 이미 계산된 key면 건너뛰기
+        if restart and key in final_result:
+            print(f"Skipping already calculated {key}")
+            continue
+            
         try:
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
@@ -613,6 +633,7 @@ def execute_benchmark_OC20(calculators, **kwargs):
     again_seed = kwargs.get("again_seed", 0.2)
     damping = kwargs.get("damping", 1.0)
     optimizer = kwargs.get("optimizer", "LBFGS")
+    restart = kwargs.get("restart", False)
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
@@ -625,19 +646,35 @@ def execute_benchmark_OC20(calculators, **kwargs):
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
 
-    final_result = {}
-
-    final_anomaly = {}
-    final_anomaly["Time"] = []
-    final_anomaly["normal"] = []
-    final_anomaly["anomaly"] = []
+    # restart가 True일 때 기존 파일들 불러오기
+    if restart:
+        try:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
+                final_result = json.load(file)
+            with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "r") as file:
+                final_anomaly = json.load(file)
+            # accum_time도 복원
+            accum_time = final_anomaly["Time"]
+            print("Successfully loaded previous calculation results")
+        except FileNotFoundError:
+            print("No previous calculation results found. Starting new calculation.")
+            final_result = {}
+            final_anomaly = {"Time": [], "normal": [], "anomaly": []}
+            accum_time = 0
+    else:
+        final_result = {}
+        final_anomaly = {"Time": [], "normal": [], "anomaly": []}
+        accum_time = 0
 
     # Calculation Part==============================================================================
 
-    accum_time = 0
-
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
+        # restart가 True이고 이미 계산된 key면 건너뛰기
+        if restart and key in final_result:
+            print(f"Skipping already calculated {key}")
+            continue
+            
         try:
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}
@@ -1963,6 +2000,7 @@ def execute_benchmark_single(calculator, **kwargs):
     benchmark = kwargs["benchmark"]
     gas_distance = kwargs.get("gas_distance", False)
     optimizer = kwargs.get("optimizer", "LBFGS")
+    restart = kwargs.get("restart", False)
 
     path_pkl = os.path.join(os.getcwd(), f"raw_data/{benchmark}.pkl")
 
@@ -1975,14 +2013,31 @@ def execute_benchmark_single(calculator, **kwargs):
     os.makedirs(f"{save_directory}/structures", exist_ok=True)
     os.makedirs(f"{save_directory}/gases", exist_ok=True)
 
-    final_result = {}
+    # restart가 True일 때 기존 파일들 불러오기
+    if restart:
+        try:
+            with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
+                final_result = json.load(file)
+            with open(f"{save_directory}/{MLIP_name}_gases.json", "r") as file:
+                gas_energies = json.load(file)
+            print("Successfully loaded previous calculation results")
+        except FileNotFoundError:
+            print("No previous calculation results found. Starting new calculation.")
+            final_result = {}
+            gas_energies = {}
+    else:
+        final_result = {}
+        gas_energies = {}
 
     # Calculation Part==============================================================================
 
-    gas_energies = {}
-
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
+        # restart가 True이고 이미 계산된 key면 건너뛰기
+        if restart and key in final_result:
+            print(f"Skipping already calculated {key}")
+            continue
+            
         try:
             print(f"[{index+1}/{len(ref_data)}] {key}")
             final_result[key] = {}

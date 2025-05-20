@@ -369,6 +369,8 @@ Observe how each MLIP predicts for each adsorbate.
 | damping | Damping factor for optimization | 1.0 |
 | gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length (Å)) | False |
 | optimizer | Optimization algorithm | "LBFGS" |
+| restart | Set to True when resuming interrupted calculations. | False |
+
 
 ### execute_benchmark_single
 | Option | Description | Default |
@@ -377,6 +379,7 @@ Observe how each MLIP predicts for each adsorbate.
 | benchmark | Name of benchmark dataset. Use "multiple_tag" for combined datasets, or specific tag name for single dataset | Required |
 | gas_distance | Cell size for gas molecules (if a number is provided, it sets the cell size as a cube with that length (Å)) | False |
 | optimizer | Optimization algorithm for gas molecule relaxation | "LBFGS" |
+| restart | Set to True when resuming interrupted calculations. | False |
 
 ### analysis_MLIPs
 | Option | Description | Default |

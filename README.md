@@ -279,23 +279,17 @@ The overall usage is similar to the general benchmark, but each MLIP will only h
 import catbench
 from your_calculator import your_MLIP_Calculator
 
-# Prepare calculator list
+# Prepare calculator
 
-calc_num = 5 # Number of calculations for reproducibility testing. Can be adjusted based on available computational resources.
-
-calculators = []
 print("Calculators Initializing...")
-for i in range(calc_num):
-    print(f"{i}th calculator")
-    calc = your_MLIP_Calculator(...)
-    calculators.append(calc)
+calc = your_MLIP_Calculator(...)
 
 config = {
     "MLIP_name": "your MLIP name", # Required: Name of your MLIP model (e.g., "MACE", "CHGNet", "UMA", "yourmodel_w_dataset1", "yourmodel_tuned_1"). You can use any abbreviation that identifies your model.
     "benchmark": "your benchmark dataset pkl name", # Required: Name of the .pkl file in the raw_data directory
     ... # For detailed configuration options, see the Configuration Options section at the bottom of this document.
 }
-catbench.execute_benchmark_single(calculator, **config)
+catbench.execute_benchmark_single(calc, **config)
 ```
 
 ### 3. Analysis

@@ -17,6 +17,7 @@ import pandas as pd
 import xlsxwriter
 import traceback
 import yaml
+import shutil
 
 GRAPHQL = "http://api.catalysis-hub.org/graphql"
 
@@ -424,6 +425,17 @@ def execute_benchmark(calculators, **kwargs):
         if restart and key in final_result:
             print(f"Skipping already calculated {key}")
             continue
+            
+        # restart가 True이고 key가 final_result에 없지만 log와 traj 폴더가 존재하는 경우 삭제
+        if restart and key not in final_result:
+            log_path = f"{save_directory}/log/{key}"
+            traj_path = f"{save_directory}/traj/{key}"
+            if os.path.exists(log_path):
+                shutil.rmtree(log_path)
+                print(f"Removed existing log directory for {key}")
+            if os.path.exists(traj_path):
+                shutil.rmtree(traj_path)
+                print(f"Removed existing trajectory directory for {key}")
             
         try:
             print(f"[{index+1}/{len(ref_data)}] {key}")

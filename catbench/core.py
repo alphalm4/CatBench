@@ -334,7 +334,6 @@ def read_E0_from_OSZICAR(file_path):
             lines = file.readlines()
             last_line = lines[-1]
 
-        # 'E0=' 다음의 값을 추출
         energy = None
         for word in last_line.split():
             if word == "E0=":
@@ -393,7 +392,6 @@ def execute_benchmark(calculators, **kwargs):
     os.makedirs(f"{save_directory}/gases/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/gases/log", exist_ok=True)
 
-    # restart가 True일 때 기존 파일들 불러오기
     if restart:
         try:
             with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
@@ -402,7 +400,6 @@ def execute_benchmark(calculators, **kwargs):
                 final_anomaly = json.load(file)
             with open(f"{save_directory}/{MLIP_name}_gases.json", "r") as file:
                 gas_energies = json.load(file)
-            # accum_time도 복원
             accum_time = final_anomaly["Time"]
             print("Successfully loaded previous calculation results")
         except FileNotFoundError:
@@ -421,12 +418,10 @@ def execute_benchmark(calculators, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
-        # restart가 True이고 이미 계산된 key면 건너뛰기
         if restart and key in final_result:
             print(f"Skipping already calculated {key}")
             continue
             
-        # restart가 True이고 key가 final_result에 없지만 log와 traj 폴더가 존재하는 경우 삭제
         if restart and key not in final_result:
             log_path = f"{save_directory}/log/{key}"
             traj_path = f"{save_directory}/traj/{key}"
@@ -658,14 +653,12 @@ def execute_benchmark_OC20(calculators, **kwargs):
     os.makedirs(f"{save_directory}/traj", exist_ok=True)
     os.makedirs(f"{save_directory}/log", exist_ok=True)
 
-    # restart가 True일 때 기존 파일들 불러오기
     if restart:
         try:
             with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
                 final_result = json.load(file)
             with open(f"{save_directory}/{MLIP_name}_anomaly_detection.json", "r") as file:
                 final_anomaly = json.load(file)
-            # accum_time도 복원
             accum_time = final_anomaly["Time"]
             print("Successfully loaded previous calculation results")
         except FileNotFoundError:
@@ -682,7 +675,6 @@ def execute_benchmark_OC20(calculators, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
-        # restart가 True이고 이미 계산된 key면 건너뛰기
         if restart and key in final_result:
             print(f"Skipping already calculated {key}")
             continue
@@ -1020,15 +1012,12 @@ def cathub_preprocess(benchmark, adsorbate_integration=None):
                             tags.remove(tag)
                         continue
 
-                # 여기서 adsorbate_integration 처리
                 if adsorbate_integration:
-                    for key in list(data_total[tag]["raw"].keys()):  # list()로 복사하여 순회 중 수정 가능하게 함
-                        if "star" in key and key != "star":  # star가 포함되어 있고, "star" 자체는 제외
-                            adsorbate = key[:-4]  # "star" 부분 제거하여 adsorbate 추출
+                    for key in list(data_total[tag]["raw"].keys()):
+                        if "star" in key and key != "star":
+                            adsorbate = key[:-4]
                             if adsorbate in adsorbate_integration:
-                                # 새로운 키 생성
                                 new_key = f"{adsorbate_integration[adsorbate]}star"
-                                # raw 딕셔너리 내의 키 변경
                                 data_total[tag]["raw"][new_key] = data_total[tag]["raw"].pop(key)
 
             except Exception as e:
@@ -1087,7 +1076,6 @@ def plotter_mono(ads_data, MLIP_name, tag, min_value, max_value, **kwargs):
 
     fig, ax = plt.subplots(figsize=figsize)
     
-    # single calculation vs normal calculation 구분
     if "normal" in ads_data["all"]:
         if tag == "all":
             plot_types = ["normal", "anomaly"]
@@ -1125,7 +1113,6 @@ def plotter_mono(ads_data, MLIP_name, tag, min_value, max_value, **kwargs):
                 elinewidth=1,
             )
     else:
-        # Single calculation 데이터 플롯
         DFT_values = ads_data["all"]["all"]["DFT"]
         MLIP_values = ads_data["all"]["all"]["MLIP"]
         scatter = ax.scatter(
@@ -1443,7 +1430,6 @@ def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kw
             data_df = pd.DataFrame(data_tmp)
             data_df.to_excel(writer, sheet_name=MLIP_name, index=False)
 
-        # 워크북 및 포맷 정의
         workbook = writer.book
         header_format = workbook.add_format({
             "align": "center", 
@@ -1464,7 +1450,6 @@ def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kw
             {"num_format": "0.000", "align": "center", "valign": "vcenter"}
         )
 
-        # 열 별 형식 및 너비 지정
         column_formats = {
             "Anomaly ratio (%)": (
                 20,
@@ -1504,7 +1489,6 @@ def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kw
             "Time_per_step (s)": (17, number_format_3f),
         }
 
-        # 모든 시트에 대해 포맷 적용
         for sheet_name in writer.sheets:
             worksheet = writer.sheets[sheet_name]
             df = (
@@ -1519,7 +1503,6 @@ def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kw
                 )
             )
 
-            # 헤더 포맷 적용
             for col_num, col_name in enumerate(df.columns):
                 worksheet.write(0, col_num, col_name, header_format)
 
@@ -1534,7 +1517,6 @@ def data_to_excel(main_data, anomaly_data, MLIPs_data, analysis_adsorbates, **kw
 
                 worksheet.set_column(col_num, col_num, width, fmt)
 
-                # 문자열 열인 경우
                 if df[col_name].dtype == "object":
                     worksheet.set_column(col_num, col_num, width, center_align)
                 else:
@@ -1664,7 +1646,6 @@ def analysis_MLIPs(**kwargs):
                 
                 MLIP_min, MLIP_max = get_ads_eng_range(MLIP_result[reaction])
 
-                # 데이터를 임시 저장할 백업 생성
                 backup = {
                     "normal": {
                         "DFT": ads_data[adsorbate]["normal"]["DFT"].copy(),
@@ -1763,7 +1744,6 @@ def analysis_MLIPs(**kwargs):
                             MLIP_max,
                         )
                 except Exception as e:
-                    # 에러 발생 시 백업 데이터로 복원
                     ads_data[adsorbate]["normal"] = backup["normal"]
                     ads_data[adsorbate]["anomaly"] = backup["anomaly"]
                     ads_data["all"]["normal"] = backup_all["normal"]
@@ -1892,7 +1872,6 @@ def analysis_MLIPs(**kwargs):
             "ads_eng_seed": ads_eng_seed,
         }
 
-        # slab 관련 항목들은 absolute_energy_MLIP이 true일 때만 추가
         if absolute_energy_MLIP:
             anomaly_data_dict.update({
                 "slab_conv": slab_conv,
@@ -1931,10 +1910,9 @@ def analysis_MLIPs_single(**kwargs):
             with open(f"{single_path}/{MLIP_name}/{MLIP_name}_result.json", "r") as f:
                 MLIP_result = json.load(f)
 
-            # 데이터 구조 수정
             ads_data = {
                 "all": {
-                    "all": {"DFT": np.array([]), "MLIP": np.array([])}  # 'all' 키를 한 단계 더 추가
+                    "all": {"DFT": np.array([]), "MLIP": np.array([])}
                 }
             }
 
@@ -1984,7 +1962,7 @@ def analysis_MLIPs_single(**kwargs):
             MAEs_all_multi = plotter_multi(
                 ads_data,
                 MLIP_name,
-                ["all"],  # 여기서 'all'을 리스트로 전달
+                ["all"],
                 "single",
                 min_value,
                 max_value,
@@ -2025,7 +2003,6 @@ def execute_benchmark_single(calculator, **kwargs):
     os.makedirs(f"{save_directory}/structures", exist_ok=True)
     os.makedirs(f"{save_directory}/gases", exist_ok=True)
 
-    # restart가 True일 때 기존 파일들 불러오기
     if restart:
         try:
             with open(f"{save_directory}/{MLIP_name}_result.json", "r") as file:
@@ -2045,7 +2022,6 @@ def execute_benchmark_single(calculator, **kwargs):
 
     print("Starting calculations...")
     for index, key in enumerate(ref_data):
-        # restart가 True이고 이미 계산된 key면 건너뛰기
         if restart and key in final_result:
             print(f"Skipping already calculated {key}")
             continue
@@ -2147,7 +2123,6 @@ def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
             data_df = pd.DataFrame(data_tmp)
             data_df.to_excel(writer, sheet_name=MLIP_name, index=False)
 
-        # 워크북 및 포맷 정의
         workbook = writer.book
         header_format = workbook.add_format({
             "align": "center", 
@@ -2168,7 +2143,6 @@ def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
             {"num_format": "0.000", "align": "center", "valign": "vcenter"}
         )
 
-        # 열 별 형식 및 너비 지정
         column_formats = {
             "MAE (eV)": (
                 15,
@@ -2185,7 +2159,6 @@ def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
             "Num_total": (12, number_format_0f),
         }
 
-        # 모든 시트에 대해 포맷 적용
         for sheet_name in writer.sheets:
             worksheet = writer.sheets[sheet_name]
             df = (
@@ -2193,7 +2166,6 @@ def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
                 else pd.DataFrame(data_tmp)
             )
 
-            # 헤더 포맷 적용
             for col_num, col_name in enumerate(df.columns):
                 worksheet.write(0, col_num, col_name, header_format)
 
@@ -2208,13 +2180,11 @@ def data_to_excel_single(main_data, MLIPs_data, analysis_adsorbates, **kwargs):
 
                 worksheet.set_column(col_num, col_num, width, fmt)
 
-                # 문자열 열인 경우
                 if df[col_name].dtype == "object":
                     worksheet.set_column(col_num, col_num, width, center_align)
                 else:
                     worksheet.set_column(col_num, col_num, width, fmt)
 
-            # 행 높이 설정
             row_height = 20
             for row in range(len(df) + 1):
                 worksheet.set_row(row, row_height)

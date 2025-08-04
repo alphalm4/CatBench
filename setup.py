@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="catbench",
-    version='{{VERSION_PLACEHOLDER}}',
+    version='v0.1.32',
     author="JinukMoon",
     author_email="jumoon@snu.ac.kr",
     packages=find_packages(),
